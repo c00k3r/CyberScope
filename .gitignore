@@ -1,0 +1,31 @@
+# ---- Maven build output ----
+target/
+
+# ---- IDE ----
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- CyberScope runtime artefacts: NEVER COMMIT ----
+# Scan output can contain real IPs, hostnames and service versions
+# from networks that are not ours to publish.
+scan-*.xml
+scans/
+reports/
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# ---- Secrets ----
+.env
+*.key
+*.pem
+nvd-api-key*
