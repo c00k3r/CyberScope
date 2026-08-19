@@ -1,56 +1,128 @@
 # CyberScope
 
-A desktop security posture analyzer built in Java and JavaFX.
+A desktop security posture analyzer built with **Java, JavaFX, Maven, and Nmap**.
 
-CyberScope automates parts of a security assessment: it performs network
-reconnaissance using Nmap, parses the results into structured data, and will
-progressively add system hardening checks, CVE mapping, a weighted posture
-score, and PDF reporting.
+CyberScope automates parts of a security assessment workflow: it validates scan targets, safely constructs Nmap commands, executes reconnaissance, parses Nmap XML output into structured data, and will progressively add system hardening checks, CVE mapping, a weighted security posture score, and PDF reporting.
 
-> **Status: v0.1.0 — under active development.**
-> This is a learning-driven build. Each version is a working, tested increment.
+> **Status: v0.1.0 — Under active development**
+>
+> CyberScope is being developed incrementally. Each version introduces a small, working, tested part of the overall system.
 
-## Why this project exists
+---
 
-Commercial posture-assessment tools (Nessus, Qualys, OpenVAS) are effectively
-black boxes to their users. CyberScope is an attempt to build the same class of
-tool from first principles in order to understand the engineering underneath:
-how a scanner is driven programmatically, how its output becomes structured
-data, how findings map to known vulnerabilities, and how those findings are
-aggregated into a defensible score.
+## Why This Project Exists
 
-## Current capability (v0.0.1)
+Commercial security assessment platforms such as Nessus, Qualys, and OpenVAS can hide much of their internal complexity behind a polished interface.
 
-- Maven project builds and runs
-- Prints version banner
+CyberScope is an attempt to build a smaller version of that workflow from first principles.
 
-## Planned
+The goal is not simply to create a scanner, but to understand the engineering and security decisions behind each stage:
 
-| Version | Capability |
-|---|---|
-| v0.0.8 | CLI: validated target -> Nmap execution -> XML parsing -> port table |
-| v0.1.0 | JavaFX interface over the same scan pipeline |
-| v0.2   | Scan presets, CIDR ranges, cancellation |
-| v0.3   | SQLite persistence and scan history |
-| v0.4   | System hardening analyzer |
-| v0.5   | CVE mapping |
-| v0.6   | Weighted security posture score and dashboard |
-| v0.8   | PDF assessment reports |
+- How an external security tool is driven programmatically
+- How user-controlled input is validated
+- How command arguments are constructed safely
+- How Java processes and their streams work
+- How Nmap output becomes structured application data
+- How scan findings can be mapped to known vulnerabilities
+- How individual findings can contribute to a security posture score
+- How the final results can be presented in an assessment report
 
-## Build and run
+The project is intentionally developed in small stages so that every layer can be implemented, tested, and understood before moving to the next one.
 
-Requires JDK 21 or later, Maven 3.9+, and Nmap 7.x on the PATH.
+---
 
-mvn clean package java -cp target/classes com.cyberscope.App
+Development Roadmap
+Version	Capability
+v0.0.x	Scanner foundation, target validation, Nmap execution, command construction, and result handling
+v0.1.0	JavaFX interface over the scanning pipeline
+v0.2	Scan presets, CIDR ranges, and cancellation
+v0.3	SQLite persistence and scan history
+v0.4	System hardening analyzer
+v0.5	CVE mapping
+v0.6	Weighted security posture score and dashboard
+v0.8	PDF assessment reports
 
-## Authorised use only
+The roadmap may evolve as the project develops.
 
-CyberScope performs active network scanning. Scanning systems you do not own or
-have explicit written permission to test is unlawful in most jurisdictions,
-including under the Information Technology Act, 2000 (India).
+## Current Status — v0.1.0
 
-See [SCOPE.md](SCOPE.md) for the targets used during development of this project.
+CyberScope currently has the foundation of its scanning pipeline in place.
 
-## Licence
+The project is still under active development. Higher-level security analysis, persistence, CVE mapping, scoring, and reporting are planned for later versions.
 
-MIT — see [LICENSE](LICENSE).
+---
+The current architecture is evolving around components such as:
+JavaFX UI
+    │
+    ▼
+Scan Workflow
+    │
+    ├── TargetValidator
+    │
+    ├── NmapCommandBuilder
+    │
+    └── NmapExecutor
+             │
+             ▼
+           Nmap
+             │
+             ▼
+         XML Output
+             │
+             ▼
+        Result Parser
+             │
+             ▼
+       Host / Port / Service
+
+Technology Stack
+Core
+Java 21+
+Maven 3.9+
+JavaFX
+Nmap 7.x
+Planned
+SQLite
+CVE data sources
+PDF report generation
+
+Testing
+
+CyberScope is being developed with automated tests alongside the implementation.
+
+Testing currently covers areas including:
+
+Target validation
+Malformed and malicious input
+Command construction
+Nmap process execution
+Process timeouts
+Nmap exit codes
+XML output handling
+Scan-result models
+
+The goal is to keep each version working and tested before moving to the next layer.
+
+Authorised Use Only
+
+CyberScope performs active network scanning.
+
+Only scan systems that you own or have explicit permission to test.
+
+Scanning systems without authorization may be illegal depending on your jurisdiction.
+
+Development and testing targets are documented in:
+
+SCOPE.md
+
+Project Philosophy
+
+CyberScope is deliberately being built incrementally.
+
+Rather than immediately creating a large application with many unfinished features, each version introduces a focused piece of functionality and verifies it with tests before the next layer is added.
+
+The objective is to understand why the system works the way it does, not simply to make it work.
+
+Licence
+
+MIT — see LICENSE.
