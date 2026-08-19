@@ -7,7 +7,7 @@ reconnaissance using Nmap, parses the results into structured data, and will
 progressively add system hardening checks, CVE mapping, a weighted posture
 score, and PDF reporting.
 
-> **Status: v0.0.1 — under active development.**
+> **Status: v0.1.0 — under active development.**
 > This is a learning-driven build. Each version is a working, tested increment.
 
 ## Why this project exists
