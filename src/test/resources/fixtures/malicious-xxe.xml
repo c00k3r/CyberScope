@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun [ <!ENTITY xxe SYSTEM "file:///etc/hostname"> ]>
+<nmaprun scanner="nmap" version="7.99">
+<host><status state="up" reason="syn-ack"/>
+<address addr="127.0.0.1" addrtype="ipv4"/>
+<hostnames><hostname name="localhost" type="PTR"/></hostnames>
+<ports><port protocol="tcp" portid="80"><state state="open" reason="syn-ack"/>
+<service name="http" product="Apache" version="2.4.41" method="probed" conf="10">
+<cpe>&xxe;</cpe></service></port></ports>
+</host></nmaprun>

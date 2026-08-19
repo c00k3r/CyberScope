@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<nmaprun scanner="nmap" version="7.99">
+<runstats><finished time="1" elapsed="0.10" exit="success"/><hosts up="0" down="0" total="0"/>
+</runstats></nmaprun>

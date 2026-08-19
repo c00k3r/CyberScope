@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<nmaprun scanner="nmap" version="7.99">
+    <host>
+        <status state="up" reason="echo-reply"/>
+
+        <address addr="AA:BB:CC:DD:EE:FF" addrtype="mac"/>
+        <address addr="192.168.1.100" addrtype="ipv4"/>
+
+        <hostnames>
+        </hostnames>
+
+        <ports/>
+    </host>
+
+    <runstats>
+        <hosts up="1" down="0" total="1"/>
+    </runstats>
+</nmaprun>
