@@ -1,4 +1,10 @@
 package com.cyberscope;
+import java.util.List;
+
+import com.cyberscope.model.Host;
+import com.cyberscope.model.Port;
+import com.cyberscope.service.scanner.NmapXmlParser;
+import com.cyberscope.service.scanner.XmlParseException;
 
 import com.cyberscope.model.ScanType;
 import com.cyberscope.service.scanner.NmapExecutionException;
@@ -78,19 +84,28 @@ public final class App {
         try {
             NmapRunResult result = NmapExecutor.execute(DEFAULT_SCAN, target);
 
-            System.out.printf("[ok] Scan finished in %.1f s%n",
-                    result.elapsed().toMillis() / 1000.0);
-            System.out.println("[ok] Received " + result.xml().length()
-                             + " characters of XML");
+            System.out.printf("[ok] Scan finished in %.1f s%n", result.elapsed().toMillis() / 1000.0);
+if (result.hasWarnings()) {
+    System.out.println();
+    System.out.println("[!?] Nmap reported warnings:");
+    result.warnings().lines().forEach(l -> System.out.println("       " + l));
+}
 
-            if (result.hasWarnings()) {
-                System.out.println();
-                System.out.println("[!?] Nmap reported warnings:");
-                result.warnings().lines().forEach(l -> System.out.println("       " + l));
-            }
+List<Host> hosts = NmapXmlParser.parse(result.xml());
+System.out.println();
+System.out.println("[ok] Parsed " + hosts.size() + " host(s)");
 
-            System.out.println();
-            System.out.println("Parsing arrives in v0.0.7.");
+for (Host host : hosts) {
+    System.out.println();
+    System.out.println("  " + host.displayName() + "  [" + host.state() + "]");
+    for (Port port : host.openPorts()) {
+        System.out.println("    " + port.number() + "/" + port.protocol()
+                + "  " + port.service().describe()
+                + "  (" + port.service().method() + ")");
+    }
+}
+System.out.println();
+System.out.println("Formatted output arrives in v0.0.8.");
 
         } catch (NmapExecutionException e) {
             System.err.println("[!!] " + e.getMessage());
@@ -98,7 +113,10 @@ public final class App {
         } catch (InvalidTargetException e) {
             System.err.println("[!!] " + e.getMessage());
             System.exit(EXIT_INVALID_TARGET);
-        }
+        } catch (XmlParseException e) {
+    System.err.println("[!!] " + e.getMessage());
+    System.exit(EXIT_SCAN_FAILED);
+}
     }
 
     /** Enforces the boundary declared in SCOPE.md at the moment packets would be sent. */
