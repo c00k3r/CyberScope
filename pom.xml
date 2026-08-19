@@ -7,7 +7,7 @@
 
   <groupId>com.cyberscope</groupId>
   <artifactId>cyberscope</artifactId>
-  <version>0.0.4</version>
+  <version>0.0.5</version>
   <packaging>jar</packaging>
 
   <name>CyberScope</name>
