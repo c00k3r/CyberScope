@@ -21,7 +21,7 @@ import java.io.InputStreamReader;
  */
 public final class App {
 
-    public static final String VERSION = "0.0.5";
+    public static final String VERSION = "0.0.6";
 
     private static final ScanType DEFAULT_SCAN = ScanType.QUICK;
     private static final int EXIT_DEPENDENCY_MISSING = 2;
