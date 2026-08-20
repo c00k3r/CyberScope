@@ -1,22 +1,31 @@
 package com.cyberscope.service.scanner;
 
+import com.cyberscope.model.ScanType;
+
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
 /**
- * The raw outcome of one Nmap invocation.
+ * Everything about one Nmap invocation.
  *
- * @param command  the exact arguments used, for display and reporting
- * @param xml      Nmap's XML report; the temp file it came from is already deleted
- * @param elapsed  wall-clock duration of the scan
- * @param warnings anything Nmap wrote to stderr. Nmap exits 0 for an unresolvable
- *                 host, so this is often the only indication that nothing was scanned.
+ * @param target    the validated target that was scanned
+ * @param scanType  the profile used
+ * @param command   the exact arguments, for the report and for reproducibility
+ * @param xml       Nmap's XML report; its temp file has already been deleted
+ * @param startedAt when the scan began — a report must state when, not when it was rendered
+ * @param elapsed   wall-clock duration
+ * @param warnings  anything Nmap wrote to stderr; often the only sign nothing was scanned
  */
-public record NmapRunResult(List<String> command, String xml,
-                            Duration elapsed, String warnings) {
+public record NmapRunResult(String target, ScanType scanType, List<String> command,
+                            String xml, Instant startedAt, Duration elapsed, String warnings) {
 
     public NmapRunResult {
-        command = List.copyOf(command);
+        Objects.requireNonNull(target, "target must not be null");
+        Objects.requireNonNull(scanType, "scanType must not be null");
+        Objects.requireNonNull(startedAt, "startedAt must not be null");
+        command  = List.copyOf(command);
         warnings = warnings == null ? "" : warnings;
     }
 

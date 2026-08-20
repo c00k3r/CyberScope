@@ -1,5 +1,5 @@
 package com.cyberscope.service.scanner;
-
+import com.cyberscope.util.TargetValidator;
 import com.cyberscope.model.ScanType;
 import com.cyberscope.util.InvalidTargetException;
 import com.cyberscope.util.ProcessResult;
@@ -41,7 +41,8 @@ public final class NmapExecutor {
      */
     public static NmapRunResult execute(ScanType scanType, String target)
             throws InvalidTargetException, NmapExecutionException {
-
+        
+        String safeTarget = TargetValidator.validate(target);
         Objects.requireNonNull(scanType, "scanType must not be null");
 
         Path xmlOutput = null;
@@ -49,12 +50,11 @@ public final class NmapExecutor {
             // Unpredictable name, atomic creation, owner-only permissions (0600).
             xmlOutput = Files.createTempFile(TEMP_PREFIX, TEMP_SUFFIX);
 
-            List<String> command = NmapCommandBuilder.build(scanType, target, xmlOutput);
-
+            List<String> command = NmapCommandBuilder.build(scanType, safeTarget, xmlOutput);
+            
             Instant started = Instant.now();
             ProcessResult result = ProcessRunner.run(command, scanType.timeout());
             Duration elapsed = Duration.between(started, Instant.now());
-
             if (!result.isSuccess()) {
                 throw new NmapExecutionException(
                         "Nmap exited with code " + result.exitCode() + "."
@@ -69,8 +69,15 @@ public final class NmapExecutor {
                         + "The scan may have been terminated externally.");
             }
 
-            return new NmapRunResult(command, xml, elapsed, result.stderr());
-
+            return new NmapRunResult(
+                    safeTarget,
+                    scanType,
+                    command,
+                    xml,
+                    started,
+                    elapsed,
+        result.stderr()
+);
         } catch (ProcessTimeoutException e) {
             throw new NmapExecutionException(
                     "Scan of '" + target + "' exceeded the " + scanType.timeout().toSeconds()
