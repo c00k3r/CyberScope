@@ -44,6 +44,41 @@ v0.8	PDF assessment reports
 
 The roadmap may evolve as the project develops.
 
+## First Milestone- v0.0.8(CLI-Based Scanning built around Nmap)
+
+# Example Scan Report
+# CyberScope scan report
+
+Target      : 127.0.0.1
+Scan type   : Quick - Top 100 ports, service and version detection
+Started     : 2026-08-20 06:03:04 IST
+Duration    : 6.7 s
+Command     : nmap -sV -T4 -F -oX /tmp/cyberscope-scan-...xml 127.0.0.1
+
+localhost (127.0.0.1)  [UP] 1 open port
+
+PORT       STATE   SERVICE   VERSION
+8080/tcp   open    http      SimpleHTTPServer 0.6 (Python 3.11.15)
+
+Detection: probed (confidence 10)
+
+1 host scanned, 1 up, 1 open port total
+
+
+## Why the DETECTION column exists
+
+Nmap reports a service one of two ways. With `-sV` it probes the port and
+fingerprints the response (`method="probed"`). Without it, it looks the port
+number up in `nmap-services` and guesses (`method="table"`).
+
+Those are not the same claim. Scanning a Python `http.server` on port 8080
+without `-sV`, Nmap reports `http-proxy` — the wrong service — with confidence
+3/10. With `-sV` it reports `SimpleHTTPServer 0.6 (Python 3.11.15)`, confidence
+10/10, plus a CPE identifier.
+
+CyberScope shows which one you got, and prints a warning when any result was a
+guess. When CVE mapping is added, only probed results will be eligible.
+
 ## Current Status — v0.1.0
 
 CyberScope currently has the foundation of its scanning pipeline in place.
