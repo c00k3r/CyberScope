@@ -12,24 +12,18 @@ import java.util.stream.Collectors;
 /**
  * Runs an external command and captures its output.
  *
- * <p>Both output streams are drained concurrently while the process runs.
- * Waiting for the process before reading its output deadlocks as soon as the
- * output exceeds the operating system's pipe buffer.
+ * <p>Both output streams are drained concurrently while the process runs. Waiting
+ * for the process before reading its output deadlocks once the output exceeds the
+ * operating system's pipe buffer.
+ *
+ * <p>The child is destroyed on every exit path, including thread interruption.
+ * Without that, cancelling a scan leaves Nmap running with nobody waiting on it.
  */
 public final class ProcessRunner {
 
     private ProcessRunner() {
     }
 
-    /**
-     * Runs a command to completion.
-     *
-     * @param command the executable followed by its arguments, as separate elements
-     * @param timeout how long to wait before killing the process
-     * @throws IOException              if the executable could not be started at all
-     * @throws ProcessTimeoutException  if the process outlived the timeout
-     * @throws InterruptedException     if this thread was interrupted while waiting
-     */
     public static ProcessResult run(List<String> command, Duration timeout)
             throws IOException, InterruptedException, ProcessTimeoutException {
 
@@ -38,23 +32,28 @@ public final class ProcessRunner {
         }
 
         Process process = new ProcessBuilder(command).start();
+        try {
+            // Start draining BEFORE waiting. This ordering is the whole point.
+            CompletableFuture<String> stdout = readAsync(process.inputReader());
+            CompletableFuture<String> stderr = readAsync(process.errorReader());
 
-        // Start draining BEFORE waiting. This ordering is the whole point.
-        CompletableFuture<String> stdout = readAsync(process.inputReader());
-        CompletableFuture<String> stderr = readAsync(process.errorReader());
+            boolean exited = process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS);
 
-        boolean exited = process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            if (!exited) {
+                throw new ProcessTimeoutException(command, timeout);
+            }
+            return new ProcessResult(process.exitValue(), stdout.join(), stderr.join());
 
-        if (!exited) {
-            process.destroyForcibly();
-            process.waitFor();
-            throw new ProcessTimeoutException(command, timeout);
+        } finally {
+            // Covers the timeout, an interrupt, and any unexpected failure above.
+            // SIGKILL, because a scanner that keeps scanning after you stop it is
+            // worse than one that never started.
+            if (process.isAlive()) {
+                process.destroyForcibly();
+            }
         }
-
-        return new ProcessResult(process.exitValue(), stdout.join(), stderr.join());
     }
 
-    /** Consumes a stream on a background thread so the child can never block on a full pipe. */
     private static CompletableFuture<String> readAsync(BufferedReader reader) {
         return CompletableFuture.supplyAsync(() -> {
             try (reader) {
