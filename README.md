@@ -64,7 +64,6 @@ Detection: probed (confidence 10)
 
 1 host scanned, 1 up, 1 open port total
 
-
 ## Why the DETECTION column exists
 
 Nmap reports a service one of two ways. With `-sV` it probes the port and
@@ -110,23 +109,9 @@ Scan Workflow
              ▼
        Host / Port / Service
 
-Technology Stack
-Core
-Java 21+
-Maven 3.9+
-JavaFX
-Nmap 7.x
-Planned
-SQLite
-CVE data sources
-PDF report generation
-
 Testing
-
 CyberScope is being developed with automated tests alongside the implementation.
-
 Testing currently covers areas including:
-
 Target validation
 Malformed and malicious input
 Command construction
@@ -139,25 +124,151 @@ Scan-result models
 The goal is to keep each version working and tested before moving to the next layer.
 
 Authorised Use Only
-
 CyberScope performs active network scanning.
 
 Only scan systems that you own or have explicit permission to test.
 
 Scanning systems without authorization may be illegal depending on your jurisdiction.
 
-Development and testing targets are documented in:
+## Security Decisions
+- **Allow-list target validation.** Only IPv4 addresses and RFC 1123 hostnames are
+  accepted. Alternate IP notations (`2130706433`, `0177.0.0.1`, `127.1`) are
+  rejected, as are targets beginning with `-`, which Nmap would read as options
+  such as `-iL` or `-oA`.
+- **No shell involved.** `ProcessBuilder` receives an argument array, so there is
+  no shell to inject into. The real risk is argument injection, which the
+  validator addresses.
+- **A closed set of scan profiles.** Nmap options come from an enum, so arbitrary
+  flags cannot be requested.
+- **XXE-hardened XML parsing.** External entity resolution is disabled and entity
+  expansion is capped. Note that `disallow-doctype-decl` is deliberately *not*
+  used, because Nmap emits `<!DOCTYPE nmaprun>` and that setting would reject
+  Nmap's own output.
+- **Secure temporary files.** Scan XML is written to a `Files.createTempFile` path
+  (unpredictable name, atomic creation, mode 0600) and deleted on every exit path.
+- **Authorisation gate.** Scans require explicit confirmation before any packets
+  are sent.
 
-SCOPE.md
+## Requirements
 
-Project Philosophy
+- JDK 21 or later
+- Maven 3.9+
+- Nmap 7.x available on the `PATH`
+
+## Build and Run
+
+```bash
+git clone https://github.com/c00k3r/CyberScope.git
+cd CyberScope
+
+# Desktop interface
+mvn clean javafx:run
+
+# Command line
+mvn clean package
+java -cp target/classes com.cyberscope.App <target>
+```
+
+| Exit code | Meaning |
+|---|---|
+| 0 | success |
+| 2 | Nmap not installed |
+| 3 | invalid target or arguments |
+| 4 | scan or parse failed |
+
+---
+
+## Testing
+
+```bash
+mvn clean test
+```
+
+CyberScope is developed with automated tests alongside the implementation.
+Coverage currently includes:
+
+- Target validation, including malformed and malicious input
+- Command construction
+- Nmap process execution, timeouts, and exit codes
+- XML parsing against captured Nmap output
+- Scan-result models
+- Report formatting
+- Command-line argument handling and exit codes
+
+The test fixtures include an XXE payload and an entity-expansion bomb, and the
+suite asserts that both are rejected.
+
+The goal is to keep each version working and tested before moving to the next
+layer.
+
+---
+
+## Technology Stack
+
+**Current**
+
+| Component | Version |
+|---|---|
+| Java | 21+ |
+| Maven | 3.9+ |
+| JavaFX | 21.0.7 |
+| JUnit | 5 |
+| Nmap | 7.x (external) |
+
+**Planned**
+
+| Component | For |
+|---|---|
+| SQLite | Scan history and persistence |
+| CVE data | Vulnerability mapping |
+| Apache PDFBox | Assessment reports |
+
+---
+
+## Development Roadmap
+
+| Version | Capability | Status |
+|---|---|---|
+| v0.0.x | Scanner foundation: target validation, command construction, Nmap execution, XML parsing, CLI reporting | Done |
+| v0.1.0 | JavaFX interface over the scanning pipeline | Done |
+| v0.2 | Scan presets, CIDR ranges, and cancellation | Next |
+| v0.3 | SQLite persistence and scan history | Planned |
+| v0.4 | System hardening analyzer | Planned |
+| v0.5 | CVE mapping | Planned |
+| v0.6 | Weighted security posture score and dashboard | Planned |
+| v0.8 | PDF assessment reports | Planned |
+
+The roadmap may evolve as the project develops.
+
+---
+
+## Project Philosophy
 
 CyberScope is deliberately being built incrementally.
 
-Rather than immediately creating a large application with many unfinished features, each version introduces a focused piece of functionality and verifies it with tests before the next layer is added.
+Rather than immediately creating a large application with many unfinished
+features, each version introduces a focused piece of functionality and verifies it
+with tests before the next layer is added.
 
-The objective is to understand why the system works the way it does, not simply to make it work.
+The objective is to understand why the system works the way it does, not simply to
+make it work.
 
-Licence
+---
 
-MIT — see LICENSE.
+## Authorised Use Only
+
+CyberScope performs active network scanning.
+
+Only scan systems that you own or have explicit permission to test. Scanning
+systems without authorisation may be illegal depending on your jurisdiction,
+including under Sections 43 and 66 of the Information Technology Act, 2000
+(India).
+
+Development and testing targets are documented in [SCOPE.md](SCOPE.md).
+
+---
+
+## Licence
+
+MIT — see [LICENSE](LICENSE).
+MDEOF
