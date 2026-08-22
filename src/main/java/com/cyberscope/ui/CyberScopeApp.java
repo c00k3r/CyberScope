@@ -5,22 +5,27 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
-/**
- * JavaFX entry point. The command-line entry point remains {@link App}.
- *
- * <p>Deliberately thin: everything except lifecycle lives in {@link ScanView},
- * so the view can be built and inspected without launching an application.
- */
+/** JavaFX entry point. The command-line entry point remains {@link App}. */
 public class CyberScopeApp extends Application {
+
+    private ScanView view;
 
     @Override
     public void start(Stage stage) {
-        ScanView view = new ScanView();
+        view = new ScanView();
         stage.setTitle("CyberScope v" + App.VERSION + " - authorised targets only");
-        stage.setScene(new Scene(view.root(), 780, 460));
-        stage.setMinWidth(640);
-        stage.setMinHeight(360);
+        stage.setScene(new Scene(view.root(), 820, 500));
+        stage.setMinWidth(680);
+        stage.setMinHeight(380);
         stage.show();
+    }
+
+    /** Runs on the FX thread at shutdown; releases the scan executor. */
+    @Override
+    public void stop() {
+        if (view != null) {
+            view.shutdown();
+        }
     }
 
     public static void main(String[] args) {
