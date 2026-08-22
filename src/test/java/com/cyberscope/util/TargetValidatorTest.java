@@ -30,32 +30,32 @@ class TargetValidatorTest {
                 "a.b,              a.b"
         })
         void acceptsAndNormalises(String input, String expected) throws Exception {
-            assertEquals(expected, TargetValidator.validate(input));
+            assertEquals(expected, TargetValidator.validate(input).value());
         }
 
         @Test
         @DisplayName("trims surrounding whitespace")
         void trimsWhitespace() throws Exception {
-            assertEquals("10.0.0.1", TargetValidator.validate("  10.0.0.1  "));
+            assertEquals("10.0.0.1", TargetValidator.validate("  10.0.0.1  ").value());
         }
 
         @Test
         @DisplayName("lowercases hostnames, since DNS is case-insensitive")
         void lowercasesHostnames() throws Exception {
-            assertEquals("scanme.nmap.org", TargetValidator.validate("SCANME.NMAP.ORG"));
+            assertEquals("scanme.nmap.org", TargetValidator.validate("SCANME.NMAP.ORG").value());
         }
 
         @Test
         @DisplayName("strips the trailing root dot of a fully qualified name")
         void stripsTrailingDot() throws Exception {
-            assertEquals("example.com", TargetValidator.validate("example.com."));
+            assertEquals("example.com", TargetValidator.validate("example.com.").value());
         }
 
         @Test
         @DisplayName("accepts a label of exactly 63 characters")
         void acceptsMaximumLabel() throws Exception {
             String host = "x".repeat(63) + ".com";
-            assertEquals(host, TargetValidator.validate(host));
+            assertEquals(host, TargetValidator.validate(host).value());
         }
     }
 
@@ -191,6 +191,76 @@ class TargetValidatorTest {
             }
             long millis = (System.nanoTime() - start) / 1_000_000;
             assertTrue(millis < 2000, "2000 validations took " + millis + "ms");
+        }
+    }
+        @Nested
+    @DisplayName("CIDR ranges")
+    class CidrRanges {
+
+        @ParameterizedTest(name = "{0} -> {1} ({2} addresses)")
+        @CsvSource({
+                "192.168.1.0/24,  192.168.1.0/24,  256",
+                "192.168.1.57/24, 192.168.1.0/24,  256",
+                "10.0.0.0/25,     10.0.0.0/25,     128",
+                "10.0.0.200/28,   10.0.0.192/28,   16",
+                "172.20.64.1/30,  172.20.64.0/30,  4",
+                "127.0.0.1/32,    127.0.0.1/32,    1"
+        })
+        @DisplayName("accepts a range and normalises it to the network address")
+        void acceptsAndNormalisesRanges(String input, String expected, int count)
+                throws Exception {
+            ValidatedTarget target = TargetValidator.validate(input);
+            assertEquals(expected, target.value());
+            assertEquals(TargetKind.CIDR, target.kind());
+            assertEquals(count, target.addressCount());
+            assertTrue(target.isRange());
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"192.168.0.0/16", "10.0.0.0/8", "0.0.0.0/0", "192.168.1.0/23"})
+        @DisplayName("refuses a range larger than /24 so a mistyped prefix cannot run away")
+        void refusesOversizedRanges(String input) {
+            InvalidTargetException e = assertThrows(InvalidTargetException.class,
+                    () -> TargetValidator.validate(input));
+            assertTrue(e.getMessage().contains("accepts at most"), e.getMessage());
+        }
+
+        @Test
+        @DisplayName("reports the true address count for /0 rather than overflowing an int")
+        void reportsCorrectCountForSlashZero() {
+            InvalidTargetException e = assertThrows(InvalidTargetException.class,
+                    () -> TargetValidator.validate("0.0.0.0/0"));
+            assertTrue(e.getMessage().contains("4294967296"),
+                    "1 << 32 wraps to 1 on an int; the count must use long arithmetic: "
+                    + e.getMessage());
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"192.168.1.0/33", "192.168.1.0/99", "192.168.1.0/024",
+                                "256.1.1.0/24", "192.168.1.0/", "192.168.1.0/-1",
+                                "192.168.1.0/24/25"})
+        @DisplayName("rejects malformed ranges")
+        void rejectsMalformedRanges(String input) {
+            assertThrows(InvalidTargetException.class, () -> TargetValidator.validate(input));
+        }
+
+        @Test
+        @DisplayName("a single host is not a range")
+        void singleHostIsNotARange() throws Exception {
+            ValidatedTarget t = TargetValidator.validate("127.0.0.1");
+            assertFalse(t.isRange());
+            assertEquals(1, t.addressCount());
+            assertEquals(TargetKind.IPV4, t.kind());
+            assertEquals("127.0.0.1", t.describe());
+        }
+
+        @Test
+        @DisplayName("describe() pluralises correctly")
+        void describePluralises() throws Exception {
+            assertEquals("127.0.0.1/32 (1 address)",
+                    TargetValidator.validate("127.0.0.1/32").describe());
+            assertEquals("10.0.0.0/25 (128 addresses)",
+                    TargetValidator.validate("10.0.0.0/25").describe());
         }
     }
 }
