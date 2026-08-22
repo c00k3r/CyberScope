@@ -7,13 +7,14 @@
 
   <groupId>com.cyberscope</groupId>
   <artifactId>cyberscope</artifactId>
-  <version>0.0.8</version>
+  <version>0.0.9</version>
   <packaging>jar</packaging>
 
   <name>CyberScope</name>
   <description>Desktop security posture analyzer with Nmap integration.</description>
 
   <properties>
+    <javafx.version>21.0.7</javafx.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>21</maven.compiler.release>
     <junit.version>5.14.4</junit.version>
@@ -25,6 +26,11 @@
       <artifactId>junit-jupiter</artifactId>
       <version>${junit.version}</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.openjfx</groupId>
+      <artifactId>javafx-controls</artifactId>
+      <version>${javafx.version}</version>
     </dependency>
   </dependencies>
 
@@ -40,6 +46,22 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.5.6</version>
+      </plugin>
+            <plugin>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-maven-plugin</artifactId>
+        <version>0.0.8</version>
+        <configuration>
+          <mainClass>com.cyberscope.ui.CyberScopeApp</mainClass>
+
+          <!-- FALLBACK: if the window fails to appear or Prism errors on OpenGL
+               under WSLg, uncomment this to force software rendering.
+          <options>
+            <option>-Dprism.order=sw</option>
+          </options>
+          -->
+
+        </configuration>
       </plugin>
     </plugins>
   </build>
