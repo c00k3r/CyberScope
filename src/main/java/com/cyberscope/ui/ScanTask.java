@@ -8,6 +8,7 @@ import com.cyberscope.service.scanner.NmapRunResult;
 import com.cyberscope.service.scanner.NmapXmlParser;
 import com.cyberscope.util.TargetValidator;
 import javafx.concurrent.Task;
+import com.cyberscope.util.ValidatedTarget; 
 
 import java.util.List;
 
@@ -35,12 +36,12 @@ public final class ScanTask extends Task<ScanOutcome> {
     @Override
     protected ScanOutcome call() throws Exception {
         updateMessage("Validating target...");
-        String target = TargetValidator.validate(rawTarget);
+        ValidatedTarget target = TargetValidator.validate(rawTarget); 
 
         updateMessage("Checking for Nmap...");
         NmapDetector.detectVersion();
 
-        updateMessage("Scanning " + target + " (" + scanType.displayName() + ")...");
+        updateMessage("Scanning " + target.describe() + " (" + scanType.displayName() + ")...");
         NmapRunResult run = NmapExecutor.execute(scanType, target);
 
         updateMessage("Parsing results...");
