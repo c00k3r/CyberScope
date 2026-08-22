@@ -1,7 +1,7 @@
 package com.cyberscope.service.scanner;
 
 import com.cyberscope.model.ScanType;
-
+import com.cyberscope.util.ValidatedTarget;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -18,7 +18,7 @@ import java.util.Objects;
  * @param elapsed   wall-clock duration
  * @param warnings  anything Nmap wrote to stderr; often the only sign nothing was scanned
  */
-public record NmapRunResult(String target, ScanType scanType, List<String> command,
+public record NmapRunResult(ValidatedTarget target, ScanType scanType, List<String> command,
                             String xml, Instant startedAt, Duration elapsed, String warnings) {
 
     public NmapRunResult {

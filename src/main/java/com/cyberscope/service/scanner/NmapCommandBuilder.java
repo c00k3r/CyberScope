@@ -1,8 +1,7 @@
 package com.cyberscope.service.scanner;
 
 import com.cyberscope.model.ScanType;
-import com.cyberscope.util.InvalidTargetException;
-import com.cyberscope.util.TargetValidator;
+import com.cyberscope.util.ValidatedTarget;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -13,7 +12,12 @@ import java.util.Objects;
  * Builds the exact argument list passed to Nmap.
  *
  * <p>Deliberately separate from execution: the command can be asserted in a unit
- * test without running anything. Nothing in this class starts a process.
+ * test without running anything.
+ *
+ * <p>Since v0.2 this takes a {@link ValidatedTarget} rather than a String. The
+ * defensive re-validation it used to perform is gone, because the type now makes
+ * an unvalidated target impossible to pass -- the compiler enforces what a runtime
+ * check used to.
  */
 public final class NmapCommandBuilder {
 
@@ -22,31 +26,17 @@ public final class NmapCommandBuilder {
     private NmapCommandBuilder() {
     }
 
-    /**
-     * Builds the command for a scan.
-     *
-     * @param scanType  which profile to run; a closed set, so arbitrary flags are impossible
-     * @param target    the target; re-validated here as a defence in depth
-     * @param xmlOutput where Nmap should write its XML report
-     * @return an immutable argument list, one argument per element
-     * @throws InvalidTargetException if the target fails validation
-     */
-    public static List<String> build(ScanType scanType, String target, Path xmlOutput)
-            throws InvalidTargetException {
-
+    public static List<String> build(ScanType scanType, ValidatedTarget target, Path xmlOutput) {
         Objects.requireNonNull(scanType, "scanType must not be null");
+        Objects.requireNonNull(target, "target must not be null");
         Objects.requireNonNull(xmlOutput, "xmlOutput must not be null");
-
-        // Re-validated even though callers are expected to have done so already.
-        // This class is the last gate before ProcessBuilder.
-        String safeTarget = TargetValidator.validate(target);
 
         List<String> command = new ArrayList<>();
         command.add(NMAP_EXECUTABLE);
         command.addAll(scanType.flags());
         command.add("-oX");
         command.add(xmlOutput.toString());
-        command.add(safeTarget);          // target last, always
+        command.add(target.value());          // target last, always
 
         return List.copyOf(command);
     }
@@ -54,9 +44,7 @@ public final class NmapCommandBuilder {
     /**
      * Renders a command for display or logging.
      *
-     * <p><strong>Display only.</strong> Never pass the result to a shell or to
-     * {@code Runtime.exec(String)} — collapsing the array into a string discards
-     * the argument boundaries that make the array form safe.
+     * <p><strong>Display only.</strong> Never pass the result to a shell.
      */
     public static String describe(List<String> command) {
         return String.join(" ", command);

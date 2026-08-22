@@ -34,7 +34,7 @@ public final class ScanReportFormatter {
         out.append(RULE).append('\n');
         out.append(" CyberScope scan report\n");
         out.append(RULE).append('\n');
-        out.append(field("Target",    run.target()));
+        out.append(field("Target",    run.target().describe()));
         out.append(field("Scan type", run.scanType().displayName()
                                       + " - " + run.scanType().description()));
         out.append(field("Started",   TIMESTAMP.format(run.startedAt().atZone(zone))));
