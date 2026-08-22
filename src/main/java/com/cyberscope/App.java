@@ -23,7 +23,7 @@ import java.util.List;
 /** Command-line entry point for CyberScope. */
 public final class App {
 
-    public static final String VERSION = "0.0.8";
+    public static final String VERSION = "0.1.0";
 
     private static final ScanType DEFAULT_SCAN = ScanType.QUICK;
 
