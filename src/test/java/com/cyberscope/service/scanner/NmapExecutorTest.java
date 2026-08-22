@@ -114,7 +114,13 @@ class NmapExecutorTest {
         @DisplayName("normalises a null warnings value to an empty string")
         void normalisesNullWarnings() {
             NmapRunResult r = new NmapRunResult(
-                    List.of("nmap"), "<nmaprun/>", java.time.Duration.ZERO, null);
+        "127.0.0.1",
+        ScanType.QUICK,
+        List.of("nmap"),
+        "<nmaprun/>",
+        java.time.Instant.now(),
+        java.time.Duration.ZERO,
+        null);
             assertEquals("", r.warnings());
             assertFalse(r.hasWarnings());
         }
@@ -123,7 +129,13 @@ class NmapExecutorTest {
         @DisplayName("the command list is immutable even if a mutable list was passed in")
         void commandIsImmutable() {
             NmapRunResult r = new NmapRunResult(
-                    new ArrayList<>(List.of("nmap")), "<nmaprun/>", java.time.Duration.ZERO, "");
+        "127.0.0.1",
+        ScanType.QUICK,
+        new ArrayList<>(List.of("nmap")),
+        "<nmaprun/>",
+        java.time.Instant.now(),
+        java.time.Duration.ZERO,
+        "");
             assertThrows(UnsupportedOperationException.class, () -> r.command().add("-sS"));
         }
     }
