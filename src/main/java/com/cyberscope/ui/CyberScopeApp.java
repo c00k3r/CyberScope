@@ -1,6 +1,9 @@
 package com.cyberscope.ui;
 
 import com.cyberscope.App;
+import com.cyberscope.repository.DatabaseManager;
+import com.cyberscope.repository.RepositoryException;
+import com.cyberscope.repository.ScanRepository;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -12,11 +15,26 @@ public class CyberScopeApp extends Application {
 
     @Override
     public void start(Stage stage) {
-        view = new ScanView();
+        ScanRepository repository = null;
+        String unavailable = "";
+
+        // The database is a convenience, not a prerequisite. A read-only home
+        // directory, a full disk, or a corrupt file must not stop someone running a
+        // scan -- so the failure is carried into the UI as a message instead of
+        // aborting startup.
+        try {
+            repository = new ScanRepository(
+                    new DatabaseManager(DatabaseManager.defaultLocation()));
+        } catch (RepositoryException e) {
+            unavailable = e.getMessage();
+            System.err.println("[!] Scan history disabled: " + e.getMessage());
+        }
+
+        view = new ScanView(repository, unavailable);
         stage.setTitle("CyberScope v" + App.VERSION + " - authorised targets only");
-        stage.setScene(new Scene(view.root(), 820, 500));
-        stage.setMinWidth(680);
-        stage.setMinHeight(380);
+        stage.setScene(new Scene(view.root(), 1040, 560));
+        stage.setMinWidth(820);
+        stage.setMinHeight(420);
         stage.show();
     }
 

@@ -28,3 +28,12 @@ NOT authorised targets and are never scanned during development of this project.
 Screenshots and sample output in this repository are produced against the
 targets listed above. No scan results from third-party networks are committed
 to this repository.
+
+### Data retention
+
+From v0.3.0 CyberScope stores completed scans in a local SQLite database at
+`~/.cyberscope/cyberscope.db` (directory 0700, file 0600). Stored data includes
+target addresses, hostnames, port states, detected service versions and CPEs.
+Nothing is transmitted anywhere. Delete individual scans with
+`cyberscope --delete <id>`, or all of them by removing the database file.
+Scanning with `--no-save` records nothing.
