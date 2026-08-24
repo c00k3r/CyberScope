@@ -29,3 +29,9 @@ reports/
 *.key
 *.pem
 nvd-api-key*
+
+# scan history - contains real host addresses and service versions
+*.db
+*.db-journal
+*.db-wal
+.cyberscope/

@@ -1,0 +1,365 @@
+/* =====================================================================
+   CyberScope - application stylesheet
+   =====================================================================
+ 
+   JavaFX CSS is NOT web CSS. Two differences matter here:
+ 
+     * There are no custom properties. `--accent: red` and `var(--accent)`
+       do nothing. The JavaFX equivalent is a LOOKED-UP COLOUR: a name
+       starting with `-` defined on an ancestor, which every descendant
+       inherits and can reference directly. That is what the block below
+       is. It is resolved at style-application time, so redefining these
+       eight names under a different root style class is all a dark theme
+       would need -- which is why they are defined once, here, and never
+       repeated as literals further down.
+ 
+     * Properties are `-fx-` prefixed and the set is much smaller than the
+       web's. There is no flexbox, no grid, no box-shadow spread; layout
+       lives in Java, and this file only controls appearance.
+ 
+   COLOUR IS USED FOR MEANING, NOT DECORATION. The only two hues in the
+   results table are the ones that encode CyberScope's central claim:
+   green for a service that was probed and confirmed, amber for one that
+   was inferred from the port number. Everything else is greyscale so
+   those two stand out.
+ 
+   Every foreground/background pair below was checked against WCAG 2.1
+   and clears AA (worst pair 4.77:1, against a 4.5:1 requirement).
+   ===================================================================== */
+ 
+.root {
+    /* --- surfaces --- */
+    -cs-bg:            #f4f6f9;   /* window background            */
+    -cs-surface:       #ffffff;   /* tables, inputs               */
+    -cs-panel:         #eef1f5;   /* history pane                 */
+    -cs-border:        #d3d9e2;
+    -cs-border-strong: #b9c1cd;
+ 
+    /* --- text --- */
+    -cs-text:          #1c2430;
+    -cs-text-muted:    #5a6472;
+ 
+    /* --- meaning --- */
+    -cs-accent:        #1f4fbf;   /* primary action, selection    */
+    -cs-probed:        #0f6b3a;   /* evidence: verified           */
+    -cs-inferred:      #8a5a00;   /* evidence: guessed            */
+    -cs-danger:        #a3231c;
+    -cs-warn-bg:       #fff7e0;
+    -cs-warn-fg:       #6f5200;
+ 
+    -fx-background-color: -cs-bg;
+    -fx-font-size: 13px;
+    -fx-text-fill: -cs-text;
+ 
+    /* NO -fx-font-family here, deliberately.
+       JavaFX does NOT fall back through a font stack the way a browser does.
+       Measured on this project:
+ 
+         "JetBrains Mono", "DejaVu Sans Mono", monospace  ->  System
+         "Nonexistent Font", "DejaVu Sans Mono"           ->  System
+         "DejaVu Sans Mono"                               ->  DejaVu Sans Mono
+         monospace                                        ->  Monospaced
+ 
+       It takes the FIRST family and, if that is missing, drops to the default --
+       it never tries the second. So a web-style stack is worse than useless: it
+       silently discards the font you wanted AND the fallback you provided.
+ 
+       That leaves two safe options: name one font you are certain is installed
+       everywhere the app runs (there is no such font across Windows, macOS and
+       Linux), or use a CSS generic, which JavaFX maps to a JVM logical font that
+       always resolves. Omitting the family entirely means the platform's own UI
+       font, which is what a desktop application should look like anyway. */
+}
+ 
+/* =====================================================================
+   TYPE
+   ===================================================================== */
+ 
+.label {
+    -fx-text-fill: -cs-text;
+}
+ 
+.section-title {
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+ 
+.muted {
+    -fx-text-fill: -cs-text-muted;
+    -fx-font-size: 12px;
+}
+ 
+/* The range hint under the target field: informative, not urgent. */
+.hint-label {
+    -fx-text-fill: -cs-text-muted;
+    -fx-font-size: 12px;
+}
+ 
+/* Nmap warnings and the "inferred, not probed" caveat. Given a tinted
+   background rather than just coloured text -- a caveat about evidence
+   quality should be hard to skim past. */
+.warning-label {
+    -fx-text-fill: -cs-warn-fg;
+    -fx-background-color: -cs-warn-bg;
+    -fx-border-color: derive(-cs-warn-fg, 70%);
+    -fx-border-width: 0 0 0 3px;
+    -fx-padding: 6px 10px 6px 10px;
+    -fx-font-size: 12px;
+}
+ 
+.summary-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+ 
+/* =====================================================================
+   INPUTS
+   ===================================================================== */
+ 
+.text-field, .combo-box-base {
+    -fx-background-color: -cs-surface;
+    -fx-border-color: -cs-border-strong;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 6px 8px 6px 8px;
+}
+ 
+.text-field:focused, .combo-box-base:focused {
+    -fx-border-color: -cs-accent;
+    -fx-border-width: 1.5px;
+}
+ 
+/* A target is an address. Proportional digits make 192.168.1.1 and
+   192.168.11.1 hard to tell apart at a glance. */
+.target-field {
+    /* A generic, not a family name -- see the note in .root. */
+    -fx-font-family: monospace;
+}
+ 
+.check-box {
+    -fx-text-fill: -cs-text;
+}
+ 
+/* =====================================================================
+   BUTTONS
+   ===================================================================== */
+ 
+.button {
+    -fx-background-color: -cs-surface;
+    -fx-border-color: -cs-border-strong;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 6px 16px 6px 16px;
+    -fx-cursor: hand;
+}
+ 
+.button:hover {
+    -fx-border-color: -cs-accent;
+}
+ 
+.button:disabled {
+    -fx-opacity: 0.45;
+    -fx-cursor: default;
+}
+ 
+/* The one primary action in the window. Exactly one thing should look
+   like the thing to click. */
+.button.primary {
+    -fx-background-color: -cs-accent;
+    -fx-border-color: -cs-accent;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+ 
+.button.primary:hover {
+    -fx-background-color: derive(-cs-accent, -12%);
+}
+ 
+/* Stop and Delete: destructive, but not shouty. Outlined rather than
+   filled, because an always-red button trains people to ignore red. */
+.button.destructive {
+    -fx-text-fill: -cs-danger;
+    -fx-border-color: derive(-cs-danger, 55%);
+}
+ 
+.button.destructive:hover {
+    -fx-border-color: -cs-danger;
+}
+ 
+/* =====================================================================
+   RESULTS TABLE
+   ===================================================================== */
+ 
+.table-view {
+    -fx-background-color: -cs-surface;
+    -fx-border-color: -cs-border;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    /* JavaFX draws a 1px inner border of its own on top of ours. */
+    -fx-table-cell-border-color: transparent;
+}
+ 
+.table-view .column-header-background {
+    -fx-background-color: #e8ecf2;
+    -fx-background-radius: 4px 4px 0 0;
+}
+ 
+.table-view .column-header {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent -cs-border transparent transparent;
+    -fx-size: 30px;
+}
+ 
+.table-view .column-header .label {
+    -fx-text-fill: #3a4453;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-alignment: center-left;
+    -fx-padding: 0 0 0 4px;
+}
+ 
+.table-row-cell {
+    -fx-cell-size: 28px;
+    -fx-border-color: transparent transparent -cs-border transparent;
+}
+ 
+.table-row-cell:odd {
+    -fx-background-color: #fafbfd;
+}
+ 
+.table-row-cell:selected {
+    -fx-background-color: #dbe7ff;
+    -fx-text-fill: -cs-text;
+}
+ 
+/* Selection must not repaint the semantic colours below into white. */
+.table-row-cell:selected .table-cell {
+    -fx-text-fill: -cs-text;
+}
+ 
+/* Modena sets .table-cell's text fill to its own -fx-text-background-color, so
+   the -fx-text-fill on .root never reaches here. Set it explicitly, or the
+   table quietly uses a colour that is not in the palette. */
+.table-cell {
+    -fx-text-fill: -cs-text;
+    -fx-padding: 0 8px 0 8px;
+    -fx-alignment: center-left;
+    -fx-border-color: transparent;
+}
+ 
+/* Port numbers: monospaced so the column reads as a column. */
+.table-cell.port-cell {
+    -fx-font-family: monospace;
+}
+ 
+/* --- the two cells that carry meaning ------------------------------- */
+ 
+/* A service CyberScope actually probed and got a banner back from. */
+.table-cell.evidence-probed,
+.table-row-cell:selected .table-cell.evidence-probed {
+    -fx-text-fill: -cs-probed;
+    -fx-font-weight: bold;
+}
+ 
+/* A service inferred from the port number. Nmap reports these
+   identically to probed ones by default; surfacing the difference is the
+   whole point of this project, so it is the one place amber appears.
+   Note the label still reads "table (3/10)" -- the colour is redundant
+   coding, never the only signal, so nothing is lost to colour blindness
+   or a greyscale screenshot. */
+.table-cell.evidence-inferred,
+.table-row-cell:selected .table-cell.evidence-inferred {
+    -fx-text-fill: -cs-inferred;
+    -fx-font-weight: bold;
+}
+ 
+.table-view .placeholder .label {
+    -fx-text-fill: -cs-text-muted;
+}
+ 
+/* =====================================================================
+   HISTORY PANE
+   ===================================================================== */
+ 
+.history-pane {
+    -fx-background-color: -cs-panel;
+    -fx-border-color: transparent -cs-border transparent transparent;
+}
+ 
+.history-pane .list-view {
+    -fx-background-color: -cs-surface;
+    -fx-border-color: -cs-border;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+}
+ 
+.history-pane .list-cell {
+    -fx-padding: 7px 10px 7px 10px;
+    -fx-border-color: transparent transparent -cs-border transparent;
+    -fx-background-color: -cs-surface;
+}
+ 
+.history-pane .list-cell:filled:hover {
+    -fx-background-color: #f0f4fb;
+}
+ 
+.history-pane .list-cell:filled:selected {
+    -fx-background-color: #dbe7ff;
+    -fx-text-fill: -cs-text;
+    -fx-border-color: transparent transparent -cs-border transparent;
+}
+ 
+/* An empty recycled cell must not draw a divider, or the list looks
+   like it contains blank rows. */
+.history-pane .list-cell:empty {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+ 
+/* =====================================================================
+   CHROME
+   ===================================================================== */
+ 
+.split-pane {
+    -fx-background-color: -cs-bg;
+    -fx-padding: 0;
+}
+ 
+.split-pane > .split-pane-divider {
+    -fx-background-color: -cs-border;
+    -fx-padding: 0 1px 0 1px;
+}
+ 
+.scan-pane {
+    -fx-background-color: -cs-bg;
+}
+ 
+.status-bar {
+    -fx-background-color: -cs-panel;
+    -fx-border-color: -cs-border transparent transparent transparent;
+}
+ 
+.status-bar .label {
+    -fx-text-fill: -cs-text-muted;
+    -fx-font-size: 12px;
+}
+ 
+.progress-bar > .track {
+    -fx-background-color: -cs-border;
+    -fx-background-radius: 3px;
+}
+ 
+.progress-bar > .bar {
+    -fx-background-color: -cs-accent;
+    -fx-background-radius: 3px;
+    -fx-padding: 4px;
+}
+ 
+.tooltip {
+    -fx-background-color: #2b3240;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-background-radius: 4px;
+}
+ 
+

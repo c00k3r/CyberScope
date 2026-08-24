@@ -1,5 +1,5 @@
 package com.cyberscope.ui;
-
+ 
 import com.cyberscope.repository.RepositoryException;
 import com.cyberscope.repository.ScanRepository;
 import com.cyberscope.repository.ScanSummary;
@@ -19,13 +19,13 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
-
+ 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
-
+ 
 /**
  * The scan history list.
  *
@@ -40,22 +40,22 @@ import java.util.function.Consumer;
  * product -- so the failure is reported, not thrown.
  */
 public final class HistoryPane {
-
+ 
     private static final DateTimeFormatter WHEN =
             DateTimeFormatter.ofPattern("dd MMM  HH:mm");
     private static final int LIST_LIMIT = 50;
-
+ 
     private final ScanRepository repository;      // null when history is unavailable
     private final String unavailableReason;
-
+ 
     private final ListView<ScanSummary> list = new ListView<>();
     private final ObservableList<ScanSummary> items = FXCollections.observableArrayList();
     private final Button deleteButton = new Button("Delete");
     private final Label countLabel = new Label();
     private final VBox root = new VBox(8);
-
+ 
     private final Consumer<ScanOutcome> onSelected;
-
+ 
     /**
      * @param repository        may be null; the pane degrades to a message
      * @param unavailableReason shown when {@code repository} is null
@@ -69,26 +69,26 @@ public final class HistoryPane {
         build();
         refresh();
     }
-
+ 
     public Region root() {
         return root;
     }
-
+ 
     private void build() {
         Label title = new Label("History");
-        title.setStyle("-fx-font-weight: bold;");
-
-        countLabel.setStyle("-fx-text-fill: #666666;");
-
+        title.getStyleClass().add(Styles.SECTION_TITLE);
+ 
+        countLabel.getStyleClass().add(Styles.MUTED);
+ 
         HBox header = new HBox(8, title, spacer(), countLabel);
         header.setAlignment(Pos.CENTER_LEFT);
-
+ 
         list.setItems(items);
         list.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         list.setPlaceholder(new Label(repository == null
                 ? "History unavailable.\n" + unavailableReason
                 : "No scans saved yet."));
-
+ 
         // A custom cell, not toString(): the summary is a data object and should not
         // carry a presentation format. Cells are recycled as the list scrolls, so
         // updateItem must handle the empty case or a stale row is left behind.
@@ -113,28 +113,31 @@ public final class HistoryPane {
                 setTooltip(new Tooltip(summary.target() + "\n" + detail));
             }
         });
-
+ 
         list.getSelectionModel().selectedItemProperty().addListener(
                 (obs, old, now) -> openSelected(now));
-
+ 
         deleteButton.setDisable(true);
+        deleteButton.getStyleClass().add(Styles.DESTRUCTIVE);
         deleteButton.setOnAction(event -> deleteSelected());
         list.getSelectionModel().selectedItemProperty().addListener(
                 (obs, old, now) -> deleteButton.setDisable(now == null));
-
+ 
         VBox.setVgrow(list, Priority.ALWAYS);
+        root.getStyleClass().add(Styles.HISTORY_PANE);
         root.getChildren().setAll(header, list, deleteButton);
-        root.setPadding(new Insets(16, 8, 12, 16));
+        deleteButton.setMaxWidth(Double.MAX_VALUE);
+        root.setPadding(new Insets(16, 12, 12, 16));
         root.setPrefWidth(300);
         root.setMinWidth(220);
     }
-
+ 
     private static Region spacer() {
         Region region = new Region();
         HBox.setHgrow(region, Priority.ALWAYS);
         return region;
     }
-
+ 
     /**
      * Re-reads the list from the database.
      *
@@ -167,13 +170,13 @@ public final class HistoryPane {
             report("Could not read history", e);
         }
     }
-
+ 
     /** Selects and shows a scan by id -- used right after one is saved. */
     public void selectById(long id) {
         items.stream().filter(s -> s.id() == id).findFirst()
              .ifPresent(s -> list.getSelectionModel().select(s));
     }
-
+ 
     private void openSelected(ScanSummary summary) {
         if (summary == null || repository == null) {
             return;
@@ -191,7 +194,7 @@ public final class HistoryPane {
             report("Could not load that scan", e);
         }
     }
-
+ 
     private void deleteSelected() {
         ScanSummary summary = list.getSelectionModel().getSelectedItem();
         if (summary == null || repository == null) {
@@ -213,7 +216,7 @@ public final class HistoryPane {
             report("Could not delete that scan", e);
         }
     }
-
+ 
     private static void report(String headline, Exception cause) {
         Alert alert = new Alert(Alert.AlertType.WARNING);
         alert.setTitle("History");
@@ -221,9 +224,11 @@ public final class HistoryPane {
         alert.setContentText(cause == null ? "" : cause.getMessage());
         alert.showAndWait();
     }
-
+ 
     // Package-private, for the headless harness.
     ListView<ScanSummary> list() { return list; }
     Button delete()              { return deleteButton; }
     Label count()                { return countLabel; }
 }
+ 
+
