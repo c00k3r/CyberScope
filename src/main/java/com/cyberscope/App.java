@@ -32,7 +32,13 @@ import java.util.Optional;
 /** Command-line entry point for CyberScope. */
 public final class App {
 
-    public static final String VERSION = "0.3.0";
+        /**
+     * Read from the build, not typed here.
+     *
+     * <p>Kept as a field so every existing reference still compiles, but it is
+     * now derived rather than declared -- see {@link BuildInfo} for why.
+     */
+    public static final String VERSION = BuildInfo.version();
 
     private static final ScanType DEFAULT_SCAN = ScanType.QUICK;
     private static final int DEFAULT_HISTORY_LIMIT = 20;

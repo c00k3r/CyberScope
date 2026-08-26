@@ -7,7 +7,7 @@
 
   <groupId>com.cyberscope</groupId>
   <artifactId>cyberscope</artifactId>
-  <version>0.2.0</version>
+  <version>0.4.0</version>
   <packaging>jar</packaging>
 
   <name>CyberScope</name>
@@ -48,6 +48,25 @@
     <finalName>cyberscope</finalName>
 
     <resources>
+
+    <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+        <includes>
+          <include>version.properties</include>
+        </includes>
+      </resource>
+      <!-- Everything else copied verbatim. app.css and the .sql files must
+           never go through substitution: any ${...} in them would be eaten,
+           and non-text resources risk being re-encoded. -->
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>false</filtering>
+        <excludes>
+          <exclude>version.properties</exclude>
+        </excludes>
+      </resource>
+
       <resource>
         <directory>src/main/resources</directory>
         <filtering>false</filtering>
