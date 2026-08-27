@@ -82,10 +82,13 @@ public final class ScanReportFormatter {
             // them, so this stays short -- the ninety-nine closed ports of a
             // typical scan are in the coverage line above, not here.
             List<Port> listed = host.ports();
-            if (listed.isEmpty()) {
-                out.append("   No ports were reported individually.\n\n");
-                continue;
-            }
+if (listed.isEmpty()) {
+    if (host.openPorts().isEmpty()) {
+        out.append("   No open ports found.\n");
+    }
+    out.append("   No ports were reported individually.\n\n");
+    continue;
+}
  
             List<String[]> rows = new ArrayList<>(listed.size());
             for (Port port : listed) {
