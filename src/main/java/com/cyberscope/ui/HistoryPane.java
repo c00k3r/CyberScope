@@ -24,6 +24,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
  
 /**
@@ -51,10 +52,12 @@ public final class HistoryPane {
     private final ListView<ScanSummary> list = new ListView<>();
     private final ObservableList<ScanSummary> items = FXCollections.observableArrayList();
     private final Button deleteButton = new Button("Delete");
+    private final Button compareButton = new Button("Compare");
     private final Label countLabel = new Label();
     private final VBox root = new VBox(8);
  
     private final Consumer<ScanOutcome> onSelected;
+    private final BiConsumer<ScanOutcome, ScanOutcome> onCompare;
  
     /**
      * @param repository        may be null; the pane degrades to a message
@@ -62,10 +65,12 @@ public final class HistoryPane {
      * @param onSelected        called on the FX thread when a past scan is chosen
      */
     public HistoryPane(ScanRepository repository, String unavailableReason,
-                       Consumer<ScanOutcome> onSelected) {
+                       Consumer<ScanOutcome> onSelected,
+                       BiConsumer<ScanOutcome, ScanOutcome> onCompare) {
         this.repository = repository;
         this.unavailableReason = unavailableReason;
         this.onSelected = onSelected;
+        this.onCompare = onCompare;
         build();
         refresh();
     }
@@ -84,7 +89,10 @@ public final class HistoryPane {
         header.setAlignment(Pos.CENTER_LEFT);
  
         list.setItems(items);
-        list.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        // MULTIPLE, with a rule the user can discover by trying it: select one
+        // entry to view it, select two to compare them. A separate "compare
+        // mode" toggle would be one more piece of state to explain.
+        list.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         list.setPlaceholder(new Label(repository == null
                 ? "History unavailable.\n" + unavailableReason
                 : "No scans saved yet."));
@@ -114,19 +122,30 @@ public final class HistoryPane {
             }
         });
  
-        list.getSelectionModel().selectedItemProperty().addListener(
-                (obs, old, now) -> openSelected(now));
- 
         deleteButton.setDisable(true);
         deleteButton.getStyleClass().add(Styles.DESTRUCTIVE);
         deleteButton.setOnAction(event -> deleteSelected());
-        list.getSelectionModel().selectedItemProperty().addListener(
-                (obs, old, now) -> deleteButton.setDisable(now == null));
+ 
+        compareButton.setDisable(true);
+        compareButton.getStyleClass().add(Styles.PRIMARY);
+        compareButton.setOnAction(event -> compareSelected());
+        compareButton.setTooltip(new Tooltip(
+                "Select two scans to compare them.\nCtrl-click, or shift-click for a range."));
+ 
+        // One listener on the list, not one per button: two listeners firing in
+        // an undefined order on the same event is a source of bugs that only
+        // appear under a fast double-click.
+        list.getSelectionModel().getSelectedItems().addListener(
+                (javafx.collections.ListChangeListener<ScanSummary>) change -> onSelectionChanged());
  
         VBox.setVgrow(list, Priority.ALWAYS);
+        HBox buttons = new HBox(8, compareButton, deleteButton);
+        HBox.setHgrow(compareButton, Priority.ALWAYS);
+        HBox.setHgrow(deleteButton, Priority.ALWAYS);
         root.getStyleClass().add(Styles.HISTORY_PANE);
-        root.getChildren().setAll(header, list, deleteButton);
+        root.getChildren().setAll(header, list, buttons);
         deleteButton.setMaxWidth(Double.MAX_VALUE);
+        compareButton.setMaxWidth(Double.MAX_VALUE);
         root.setPadding(new Insets(16, 12, 12, 16));
         root.setPrefWidth(300);
         root.setMinWidth(220);
@@ -175,6 +194,43 @@ public final class HistoryPane {
     public void selectById(long id) {
         items.stream().filter(s -> s.id() == id).findFirst()
              .ifPresent(s -> list.getSelectionModel().select(s));
+    }
+ 
+    /**
+     * One place that decides what the current selection means.
+     *
+     * <p>Exactly one selected opens that scan; exactly two enables Compare.
+     * Opening a scan on a two-item selection would fight the user as they build
+     * it, so the view only follows a single selection.
+     */
+    private void onSelectionChanged() {
+        List<ScanSummary> selected = list.getSelectionModel().getSelectedItems();
+        compareButton.setDisable(selected.size() != 2);
+        deleteButton.setDisable(selected.size() != 1);
+        if (selected.size() == 1) {
+            openSelected(selected.get(0));
+        }
+    }
+ 
+    private void compareSelected() {
+        List<ScanSummary> selected = List.copyOf(list.getSelectionModel().getSelectedItems());
+        if (selected.size() != 2 || repository == null) {
+            return;
+        }
+        try {
+            Optional<ScanOutcome> first = repository.load(selected.get(0).id());
+            Optional<ScanOutcome> second = repository.load(selected.get(1).id());
+            if (first.isEmpty() || second.isEmpty()) {
+                report("One of those scans is no longer in the database.", null);
+                refresh();
+                return;
+            }
+            // The comparator sorts them by time; the order they were clicked in
+            // is not the order they happened in.
+            onCompare.accept(first.get(), second.get());
+        } catch (RepositoryException e) {
+            report("Could not load those scans", e);
+        }
     }
  
     private void openSelected(ScanSummary summary) {
@@ -228,6 +284,7 @@ public final class HistoryPane {
     // Package-private, for the headless harness.
     ListView<ScanSummary> list() { return list; }
     Button delete()              { return deleteButton; }
+    Button compare()             { return compareButton; }
     Label count()                { return countLabel; }
 }
  

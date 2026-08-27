@@ -40,6 +40,12 @@ final class Styles {
     static final String PROBED        = "evidence-probed";
     static final String INFERRED      = "evidence-inferred";
  
+    // --- comparison ------------------------------------------------------
+    /** A change that increases exposure: a port opened. */
+    static final String CHANGE_WORSE  = "change-worse";
+    /** A change that decreases exposure: a port closed. */
+    static final String CHANGE_BETTER = "change-better";
+ 
     private Styles() {
     }
  
