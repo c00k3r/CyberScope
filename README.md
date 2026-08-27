@@ -1,7 +1,9 @@
 CyberScope
 A security posture analyzer in Java. CyberScope drives Nmap programmatically, parses its XML into structured data, stores every scan, and compares scans over time — while keeping track of the difference between what it verified and what it merely inferred.
 
-Show Image (docs/v040-diff.png)
+Show Image:
+width="1100" height="580" alt="v040-diff" src="https://github.com/user-attachments/assets/686889b7-9127-41ed-a1d8-dcafa40b503e" />
+
 
 Status: v0.4.0 — under active development. Built incrementally; every version is a small, working, tested slice. 306 tests currently pass.
 
