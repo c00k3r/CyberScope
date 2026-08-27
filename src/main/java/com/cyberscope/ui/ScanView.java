@@ -6,6 +6,8 @@ import com.cyberscope.model.Port;
 import com.cyberscope.model.ScanType;
 import com.cyberscope.model.Service;
 import com.cyberscope.repository.ScanRepository;
+import com.cyberscope.service.compare.ScanComparator;
+import com.cyberscope.service.compare.ScanDiff;
 import com.cyberscope.service.scanner.ScanOutcome;
 import com.cyberscope.util.InvalidTargetException;
 import com.cyberscope.util.TargetValidator;
@@ -66,6 +68,8 @@ public final class ScanView {
  
     private final ScanRepository repository;      // null when history is unavailable
     private final HistoryPane history;
+    private final DiffView diffView;
+    private VBox resultsPane;
     private final SplitPane root = new SplitPane();
     private final BorderPane scanPane = new BorderPane();
  
@@ -94,6 +98,7 @@ public final class ScanView {
         VBox centre = new VBox(6, summaryLabel, warningLabel, resultsTable);
         centre.setPadding(new Insets(0, 16, 8, 16));
         VBox.setVgrow(resultsTable, Priority.ALWAYS);
+        resultsPane = centre;
  
         HBox statusBar = new HBox(statusLabel);
         statusBar.setPadding(new Insets(8, 16, 12, 16));
@@ -107,7 +112,9 @@ public final class ScanView {
         scanPane.setCenter(centre);
         scanPane.setBottom(statusBar);
  
-        history = new HistoryPane(repository, unavailableReason, this::showSavedScan);
+        diffView = new DiffView(this::showResults);
+        history = new HistoryPane(repository, unavailableReason,
+                                  this::showSavedScan, this::showComparison);
  
         root.getItems().setAll(history.root(), scanPane);
         // A divider position is a fraction of the width, not pixels. Pinning the
@@ -332,6 +339,7 @@ public final class ScanView {
         task.setOnSucceeded(event -> {
             statusLabel.textProperty().unbind();
             finishScan();
+            showResults();
             showOutcome(task.getValue());
             recordInHistory(task);
         });
@@ -472,10 +480,37 @@ public final class ScanView {
      * differs, because the one thing the user must not be confused about is whether
      * they are looking at something that just happened or something from last week.
      */
+    /**
+     * Renders a comparison of two saved scans.
+     *
+     * <p>Replaces the results table rather than opening a window. A comparison
+     * and a scan report answer different questions about the same target, and
+     * showing them side by side invites reading a number from one as if it came
+     * from the other.
+     */
+    void showComparison(ScanOutcome first, ScanOutcome second) {
+        if (runningTask != null) {
+            return;
+        }
+        ScanDiff diff = ScanComparator.compare(first, second);
+        diffView.show(diff);
+        scanPane.setCenter(diffView.root());
+        statusLabel.setText("Comparing scans  -  " + diff.hostChanges().size()
+                + " change(s) on the host, " + diff.evidenceChanges().size()
+                + " in evidence"
+                + (diff.isTrustworthy() ? "" : "   [routes differ: see the warning]"));
+    }
+ 
+    /** Returns from a comparison to the last scan shown. */
+    void showResults() {
+        scanPane.setCenter(resultsPane);
+    }
+ 
     void showSavedScan(ScanOutcome outcome) {
         if (runningTask != null) {
             return;                     // never stamp on a scan in progress
         }
+        showResults();
         showOutcome(outcome);
         targetField.setText(outcome.run().target().value());
         scanTypeBox.getSelectionModel().select(outcome.run().scanType());
@@ -518,6 +553,7 @@ public final class ScanView {
     ProgressBar progress()      { return progressBar; }
     TableColumn<PortRow, String> hostColumn() { return hostColumn; }
     HistoryPane history()       { return history; }
+    DiffView diff()             { return diffView; }
     String scanTypeBoxValue()   { return scanTypeBox.getValue().displayName(); }
     Executor executor()         { return scanExecutor; }
 }

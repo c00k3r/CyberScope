@@ -1,5 +1,7 @@
 package com.cyberscope.service.scanner;
 
+import com.cyberscope.model.*;
+import com.cyberscope.util.PortRanges;      // add this line
 import com.cyberscope.model.DetectionMethod;
 import com.cyberscope.model.Host;
 import com.cyberscope.model.HostState;
@@ -22,6 +24,11 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;    // add
+import java.util.LinkedHashSet;    // add
+import java.util.Map;              // add
+import java.util.Set;              // add
 
 /**
  * Parses Nmap XML into domain objects.
@@ -105,9 +112,69 @@ public final class NmapXmlParser {
         for (int i = 0; i < portNodes.getLength(); i++) {
             ports.add(parsePort((Element) portNodes.item(i)));
         }
-        return new Host(ipAddress, hostname, state, ports);
+        return new Host(ipAddress, hostname, state, ports, parseSummaries(hostElement));
     }
 
+     /**
+     * Reads the {@code <extraports>} blocks -- the ports Nmap scanned but chose
+     * not to list one by one.
+     *
+     * <p>There can be more than one block per host, one per state. A scan of a
+     * black-holed address produced a single {@code filtered} block carrying two
+     * {@code <extrareasons>} children: {@code no-response} for 110 ports and
+     * {@code host-unreach} for 10. Assuming one reason per block would have
+     * silently dropped ten ports of coverage.
+     */
+    private static List<PortSummary> parseSummaries(Element hostElement)
+            throws XmlParseException {
+        List<PortSummary> summaries = new ArrayList<>();
+        NodeList blocks = hostElement.getElementsByTagName("extraports");
+
+        for (int i = 0; i < blocks.getLength(); i++) {
+            Element block = (Element) blocks.item(i);
+            PortState state = PortState.from(block.getAttribute("state"));
+            int count = parseCount(block.getAttribute("count"), "extraports");
+
+            Map<String, Integer> reasons = new LinkedHashMap<>();
+            Set<Integer> ports = new LinkedHashSet<>();
+
+            NodeList reasonNodes = block.getElementsByTagName("extrareasons");
+            for (int r = 0; r < reasonNodes.getLength(); r++) {
+                Element reasonElement = (Element) reasonNodes.item(r);
+                String reason = reasonElement.getAttribute("reason");
+                int reasonCount = parseCount(reasonElement.getAttribute("count"),
+                                             "extrareasons");
+                // merge, not put: two blocks could in principle name the same reason
+                reasons.merge(reason.isBlank() ? "unknown" : reason, reasonCount, Integer::sum);
+
+                // #IMPLIED in Nmap's DTD, so absence is normal, not an error.
+                // A malformed value is a different matter and is reported.
+                String portsAttribute = reasonElement.getAttribute("ports");
+                try {
+                    ports.addAll(PortRanges.parse(portsAttribute));
+                } catch (IllegalArgumentException e) {
+                    throw new XmlParseException(
+                            "Unparseable ports attribute on <extrareasons>: " + e.getMessage(), e);
+                }
+            }
+            summaries.add(new PortSummary(state, count, reasons, ports));
+        }
+        return summaries;
+    }
+
+    private static int parseCount(String raw, String element) throws XmlParseException {
+        try {
+            int value = Integer.parseInt(raw.trim());
+            if (value < 0) {
+                throw new XmlParseException(
+                        "Negative count on <" + element + ">: " + value);
+            }
+            return value;
+        } catch (NumberFormatException e) {
+            throw new XmlParseException(
+                    "Unparseable count on <" + element + ">: '" + raw + "'", e);
+        }
+    }
     /**
      * A host may carry several addresses (ipv4, ipv6, mac) and document order is not
      * a contract, so we select by addrtype rather than taking the first.

@@ -1,6 +1,7 @@
 package com.cyberscope.service.scanner;
 
 import com.cyberscope.model.ScanType;
+import com.cyberscope.util.NetworkContext;
 import com.cyberscope.util.ProcessResult;
 import com.cyberscope.util.ProcessRunner;
 import com.cyberscope.util.ProcessTimeoutException;
@@ -55,15 +56,20 @@ public final class NmapExecutor {
             xmlOutput = Files.createTempFile(TEMP_PREFIX, TEMP_SUFFIX);
 
             /*
- * The command builder accepts only a ValidatedTarget, preserving the
- * validation boundary all the way to Nmap command construction.
- */
+             * The command builder accepts only a ValidatedTarget, preserving the
+             * validation boundary all the way to Nmap command construction.
+             */
             List<String> command =
-        NmapCommandBuilder.build(
-                scanType,
-                target,
-                xmlOutput
+                    NmapCommandBuilder.build(
+                            scanType,
+                            target,
+                            xmlOutput
                     );
+
+            // Capture routing context before the scan, while the routing state
+            // is the one the scan will actually use. Sends nothing.
+            NetworkContext context =
+                    NetworkContext.forTarget(target.value());
 
             Instant started = Instant.now();
 
@@ -98,7 +104,8 @@ public final class NmapExecutor {
                     xml,
                     started,
                     elapsed,
-                    result.stderr()
+                    result.stderr(),
+                    context
             );
 
         } catch (ProcessTimeoutException e) {

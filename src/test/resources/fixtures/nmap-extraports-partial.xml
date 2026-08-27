@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<!-- Two <extrareasons> children under one <extraports>, taken from a real scan
+     of a black-holed address. The second reason deliberately has NO ports=
+     attribute: it is #IMPLIED in Nmap's DTD, so absence is legal and must not
+     be treated as an error – it makes coverage incomplete, which is different. -->
+<nmaprun scanner="nmap" args="nmap -sT -Pn -p 1-120 192.0.2.7" start="1756017500" version="7.94SVN">
+<host>
+<status state="up" reason="user-set"/>
+<address addr="192.0.2.7" addrtype="ipv4"/>
+<ports><extraports state="filtered" count="120">
+<extrareasons reason="no-response" count="110" proto="tcp" ports="1-4,6-9,11-12,14-35"/>
+<extrareasons reason="host-unreach" count="10" proto="tcp"/>
+</extraports>
+</ports>
+</host>
+<runstats><finished time="1756017560" elapsed="60.0"/><hosts up="1" down="0" total="1"/></runstats>
+</nmaprun>
