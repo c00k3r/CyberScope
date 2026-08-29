@@ -39,6 +39,12 @@ final class Styles {
     static final String PORT_CELL     = "port-cell";
     static final String PROBED        = "evidence-probed";
     static final String INFERRED      = "evidence-inferred";
+
+    // --- vulnerabilities --------------------------------------------------
+    /** Findings at HIGH or CRITICAL. */
+    static final String VULN_SEVERE   = "vuln-severe";
+    /** Looked up, nothing filed. The only green that means "clean". */
+    static final String VULN_CLEAN    = "vuln-clean";
  
     // --- comparison ------------------------------------------------------
     /** A change that increases exposure: a port opened. */

@@ -22,7 +22,7 @@ class ProcessRunnerCancellationTest {
 
     private static long sleepersRunning() throws Exception {
         Process p = new ProcessBuilder("bash", "-c",
-                "pgrep -f 'sleep 3675' | wc -l").start();
+                "pgrep -f '[s]leep 3675' | wc -l").start();
         String out = new String(p.getInputStream().readAllBytes()).trim();
         p.waitFor();
         return Long.parseLong(out);

@@ -35,3 +35,8 @@ nvd-api-key*
 *.db-journal
 *.db-wal
 .cyberscope/
+
+target/
+*.db
+*.db.building
+docs/*.tmp

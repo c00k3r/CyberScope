@@ -361,5 +361,37 @@
     -fx-font-size: 12px;
     -fx-background-radius: 4px;
 }
+
+/* --- vulnerabilities -----------------------------------------------------
+   Three states, three treatments, and the amber is deliberately the SAME amber
+   as evidence-inferred. Both mean the same thing to a reader: this cell is not
+   evidence. A separate colour would invite the eye to treat "we could not look
+   this up" as its own category rather than as another kind of not-knowing.
+   The text says which in every case, so nothing is lost in greyscale.        */
+
+.vuln-severe {
+    -fx-text-fill: -cs-worse;
+    -fx-font-weight: bold;
+}
+
+.vuln-clean {
+    -fx-text-fill: -cs-better;
+}
+
+.index-bar {
+    -fx-padding: 6px 16px 6px 16px;
+    -fx-border-width: 1px 0 0 0;
+    -fx-border-color: -cs-border transparent transparent transparent;
+}
+
+.index-bar .label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -cs-text-muted;
+}
+
+.index-stale {
+    -fx-text-fill: -cs-inferred;
+    -fx-font-weight: bold;
+}
  
 

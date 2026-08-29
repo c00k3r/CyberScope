@@ -2,84 +2,135 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
   <modelVersion>4.0.0</modelVersion>
- 
+
   <groupId>com.cyberscope</groupId>
   <artifactId>cyberscope</artifactId>
-  <version>0.4.0</version>
+  <version>0.5.0</version>
   <packaging>jar</packaging>
- 
+
   <name>CyberScope</name>
-  <description>A security posture analyzer that tracks how well it knows what it found.</description>
-  <url>https://github.com/c00k3r/CyberScope</url>
- 
-  <licenses>
-    <license>
-      <name>MIT License</name>
-      <url>https://opensource.org/licenses/MIT</url>
-    </license>
-  </licenses>
- 
+  <description>
+    A network security posture analyzer that reports what it knows, what it
+    could not check, and the difference between them.
+  </description>
+
   <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
     <javafx.version>21.0.7</javafx.version>
     <junit.version>5.14.4</junit.version>
     <sqlite.version>3.53.2.1</sqlite.version>
-    <main.class>com.cyberscope.App</main.class>
-    <gui.class>com.cyberscope.ui.CyberScopeApp</gui.class>
+    <xz.version>1.10</xz.version>
+    <jackson.version>2.18.2</jackson.version>
   </properties>
- 
+
   <dependencies>
+
+    <!-- User interface. -->
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-controls</artifactId>
       <version>${javafx.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.openjfx</groupId>
+      <artifactId>javafx-base</artifactId>
+      <version>${javafx.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openjfx</groupId>
+      <artifactId>javafx-graphics</artifactId>
+      <version>${javafx.version}</version>
+    </dependency>
+
+    <!-- Scan history and the CVE index. Two database files, one driver. -->
+    <dependency>
       <groupId>org.xerial</groupId>
       <artifactId>sqlite-jdbc</artifactId>
       <version>${sqlite.version}</version>
     </dependency>
+
+    <!--
+      The NVD feed is published as .xz and nothing else - .json, .gz, .zst and
+      .bz2 were all probed and return HTTP 404. The JDK ships GZIPInputStream
+      but no XZ decoder, so this is not optional. Pure Java, public domain, no
+      transitive dependencies, 164 KB.
+    -->
+    <dependency>
+      <groupId>org.tukaani</groupId>
+      <artifactId>xz</artifactId>
+      <version>${xz.version}</version>
+    </dependency>
+
+    <!--
+      Streaming JSON. jackson-core ONLY: no databind, no annotations, no
+      reflection. The corpus is about 2.9 GB uncompressed, so it can be neither
+      bound to objects nor read as a tree - the 1.6 MB databind jar would add an
+      API this code is structurally unable to use. 583 KB.
+    -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
+
   </dependencies>
- 
+
   <build>
+    <!--
+      Two resource blocks, and the split matters. Maven filtering rewrites
+      ${...} placeholders, which is exactly right for version.properties and
+      exactly wrong for everything else: an SQL script or a CSS file containing
+      a dollar-brace sequence would be silently rewritten. Filtering is enabled
+      for one file and disabled for the rest, rather than turned on globally.
+    -->
     <resources>
       <resource>
         <directory>src/main/resources</directory>
         <filtering>true</filtering>
-        <includes><include>version.properties</include></includes>
+        <includes>
+          <include>version.properties</include>
+        </includes>
       </resource>
       <resource>
         <directory>src/main/resources</directory>
         <filtering>false</filtering>
-        <excludes><exclude>version.properties</exclude></excludes>
+        <excludes>
+          <exclude>version.properties</exclude>
+        </excludes>
       </resource>
     </resources>
- 
+
     <plugins>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.5.2</version>
       </plugin>
- 
-      <plugin>
-        <groupId>org.openjfx</groupId>
-        <artifactId>javafx-maven-plugin</artifactId>
-        <version>0.0.8</version>
-        <configuration>
-          <mainClass>${gui.class}</mainClass>
-        </configuration>
-      </plugin>
- 
+
+      <!--
+        One runnable jar for the CLI.
+
+        The include list is the part that breaks silently. JavaFX is deliberately
+        absent - it needs the module path and a platform classifier, and the GUI
+        is launched through javafx:run, not this jar. Everything the CLI touches
+        at runtime must be listed, or `mvn package` succeeds, the tests pass, and
+        `java -jar` dies with NoClassDefFoundError on a class nobody was thinking
+        about. v0.5.0 added two entries here; forgetting either is invisible
+        until someone runs the CVE index refresh from the jar.
+      -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
@@ -90,10 +141,13 @@
             <goals><goal>shade</goal></goals>
             <configuration>
               <finalName>cyberscope</finalName>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
               <artifactSet>
                 <includes>
                   <include>org.xerial:sqlite-jdbc</include>
                   <include>org.slf4j:*</include>
+                  <include>org.tukaani:xz</include>
+                  <include>com.fasterxml.jackson.core:jackson-core</include>
                 </includes>
               </artifactSet>
               <filters>
@@ -103,21 +157,34 @@
                     <exclude>META-INF/*.SF</exclude>
                     <exclude>META-INF/*.DSA</exclude>
                     <exclude>META-INF/*.RSA</exclude>
+                    <exclude>module-info.class</exclude>
                   </excludes>
                 </filter>
               </filters>
               <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>${main.class}</mainClass>
+                <transformer implementation=
+                    "org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>com.cyberscope.App</mainClass>
                 </transformer>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                <transformer implementation=
+                    "org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
               </transformers>
             </configuration>
           </execution>
         </executions>
       </plugin>
+
+      <!-- The GUI: mvn javafx:run -->
+      <plugin>
+        <groupId>org.openjfx</groupId>
+        <artifactId>javafx-maven-plugin</artifactId>
+        <version>0.0.8</version>
+        <configuration>
+          <mainClass>com.cyberscope.ui.CyberScopeApp</mainClass>
+        </configuration>
+      </plugin>
+
     </plugins>
   </build>
-</project>
- 
 
+</project>
