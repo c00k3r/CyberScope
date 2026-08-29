@@ -29,7 +29,7 @@ import java.util.Optional;
  * 1,208 rows. Filtering 1,208 records in Java is free. The alternative buys
  * nothing and costs flexibility.
  */
-public final class CveRepository {
+public final class CveRepository implements CveLookup {
 
     private final CveIndexManager manager;
 
@@ -50,6 +50,7 @@ public final class CveRepository {
      *         means NVD has nothing filed under that vendor:product, which is the
      *         {@code UNRESOLVED} case Part 3 reports out loud
      */
+    @Override
     public List<CveMatchRow> findByProduct(String vendor, String product)
             throws RepositoryException {
         String sql = """
@@ -80,6 +81,7 @@ public final class CveRepository {
     }
 
     /** True when the index has been built and contains data. */
+    @Override
     public boolean isPopulated() throws RepositoryException {
         try (Connection connection = manager.connect();
              Statement statement = connection.createStatement();
