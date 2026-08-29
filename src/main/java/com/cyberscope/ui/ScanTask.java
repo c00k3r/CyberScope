@@ -1,5 +1,11 @@
 package com.cyberscope.ui;
 
+import com.cyberscope.model.Port;
+import com.cyberscope.model.VulnAssessment;
+import com.cyberscope.repository.CveLookup;
+import com.cyberscope.service.vuln.VulnerabilityService;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import com.cyberscope.model.Host;
 import com.cyberscope.model.ScanType;
 import com.cyberscope.repository.RepositoryException;
@@ -32,6 +38,7 @@ public final class ScanTask extends Task<ScanOutcome> {
     private final ScanType scanType;
     private final String rawTarget;
     private final ScanRepository repository;    // null = do not persist
+    private final CveLookup cveIndex;           // null = no vulnerability lookup
 
     /**
      * Written on the background thread in {@link #call()}, read on the FX thread in
@@ -47,10 +54,21 @@ public final class ScanTask extends Task<ScanOutcome> {
     private volatile long savedId = -1;
     private volatile String saveError;
 
-    public ScanTask(ScanType scanType, String rawTarget, ScanRepository repository) {
+        public ScanTask(ScanType scanType, String rawTarget, ScanRepository repository) {
+        this(scanType, rawTarget, repository, null);
+    }
+
+    public ScanTask(ScanType scanType, String rawTarget, ScanRepository repository,
+                    CveLookup cveIndex) {
         this.scanType = scanType;
         this.rawTarget = rawTarget;
         this.repository = repository;
+        this.cveIndex = cveIndex;
+    }
+
+    /** Assessments by port. Empty until {@link #call()} has finished. */
+    public Map<Port, VulnAssessment> assessments() {
+        return assessments;
     }
 
     /** The id this scan was stored under, or -1 if it was not stored. */
@@ -62,6 +80,18 @@ public final class ScanTask extends Task<ScanOutcome> {
     public String saveError() {
         return saveError;
     }
+     
+         /**
+     * Assessments, keyed by port, written on the background thread.
+     *
+     * <p>Same {@code volatile} reasoning as the two fields above, and the same
+     * reason this work happens here rather than in the success handler: assessing
+     * a twelve-service host takes about 216 ms against the real index, and a /24
+     * with three open ports per host would be roughly fourteen seconds. On the FX
+     * thread that is a frozen window; here it is time the user is already
+     * spending watching a scan run.
+     */
+    private volatile Map<Port, VulnAssessment> assessments = Map.of();
 
     @Override
     protected ScanOutcome call() throws Exception {
@@ -79,6 +109,13 @@ public final class ScanTask extends Task<ScanOutcome> {
         ScanOutcome outcome = new ScanOutcome(run, hosts);
 
         persist(outcome);
+                updateMessage("Checking services against the CVE index...");
+        VulnerabilityService vulnerabilities = new VulnerabilityService(cveIndex);
+        Map<Port, VulnAssessment> assessed = new LinkedHashMap<>();
+        for (Host host : hosts) {
+            assessed.putAll(vulnerabilities.assess(host));
+        }
+        assessments = Map.copyOf(assessed);
         return outcome;
     }
 
