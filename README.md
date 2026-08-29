@@ -1,33 +1,3 @@
-
-/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Cyberscope readme v050 · MD
 CyberScope
 A security posture analyzer in Java. CyberScope drives Nmap programmatically, parses its XML into structured data, stores every scan, compares scans over time, and maps detected services to CVEs — while keeping track of the difference between what it verified, what it merely inferred, and what it could not check at all.
 
