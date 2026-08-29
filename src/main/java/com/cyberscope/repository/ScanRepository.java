@@ -171,22 +171,65 @@ public final class ScanRepository {
             ps.setInt(1, limit);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    summaries.add(new ScanSummary(
-                            rs.getLong("id"),
-                            rs.getString("target"),
-                            ScanType.valueOf(rs.getString("scan_type")),
-                            Instant.parse(rs.getString("started_at")),
-                            Duration.ofMillis(rs.getLong("elapsed_ms")),
-                            rs.getInt("host_count"),
-                            rs.getInt("open_count")));
-                }
+    summaries.add(toSummary(rs));
+}
             }
         } catch (SQLException e) {
             throw new RepositoryException("Could not list scan history: " + e.getMessage(), e);
         }
         return List.copyOf(summaries);
     }
+/**
+ * One mapping, used by both listing queries.
+ */
+private static ScanSummary toSummary(ResultSet rs) throws SQLException {
+    return new ScanSummary(
+            rs.getLong("id"),
+            rs.getString("target"),
+            ScanType.valueOf(rs.getString("scan_type")),
+            Instant.parse(rs.getString("started_at")),
+            Duration.ofMillis(rs.getLong("elapsed_ms")),
+            rs.getInt("host_count"),
+            rs.getInt("open_count"));
+}
+/**
+ * The most recent scans of one target, newest first.
+ */
+public List<ScanSummary> findByTarget(String target, int limit) throws RepositoryException {
+    String sql = """
+            SELECT s.id, s.target, s.scan_type, s.started_at, s.elapsed_ms,
+                   (SELECT COUNT(*) FROM hosts h
+                      WHERE h.session_id = s.id) AS host_count,
+                   (SELECT COUNT(*) FROM ports p
+                      JOIN hosts h2 ON p.host_id = h2.id
+                     WHERE h2.session_id = s.id AND p.state = 'OPEN') AS open_count
+              FROM scan_sessions s
+             WHERE s.target = ?
+             ORDER BY s.started_at DESC, s.id DESC
+             LIMIT ?
+            """;
 
+    List<ScanSummary> summaries = new ArrayList<>();
+
+    try (Connection connection = database.connect();
+         PreparedStatement ps = connection.prepareStatement(sql)) {
+
+        ps.setString(1, target);
+        ps.setInt(2, limit);
+
+        try (ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                summaries.add(toSummary(rs));
+            }
+        }
+
+    } catch (SQLException e) {
+        throw new RepositoryException(
+                "Could not list scans of " + target + ": " + e.getMessage(), e);
+    }
+
+    return List.copyOf(summaries);
+}
     /** Loads one complete scan, or empty if that id does not exist. */
     public Optional<ScanOutcome> load(long id) throws RepositoryException {
         try (Connection connection = database.connect()) {

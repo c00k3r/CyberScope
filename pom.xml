@@ -48,6 +48,23 @@
       <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
+        <!-- The NVD feed is published as .xz only; the JDK has GZIP but not XZ.
+         Pure Java, public domain, no transitive dependencies. 164 KB. -->
+    <dependency>
+      <groupId>org.tukaani</groupId>
+      <artifactId>xz</artifactId>
+      <version>1.10</version>
+    </dependency>
+
+    <!-- Streaming JSON. jackson-core ONLY: no databind, no annotations, no
+         reflection, no object mapping. 583 KB. The 2.9 GB corpus cannot be
+         bound or read as a tree, so the 1.6 MB databind jar would buy nothing
+         this code could use. -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>2.18.2</version>
+    </dependency>
   </dependencies>
  
   <build>
@@ -94,6 +111,8 @@
                 <includes>
                   <include>org.xerial:sqlite-jdbc</include>
                   <include>org.slf4j:*</include>
+                  <include>org.tukaani:xz</include>
+                  <include>com.fasterxml.jackson.core:jackson-core</include>
                 </includes>
               </artifactSet>
               <filters>
