@@ -1,5 +1,7 @@
 package com.cyberscope;
 
+import com.cyberscope.repository.ExploitFeedLoader;
+import com.cyberscope.repository.FeedMetadata;
 import com.cyberscope.model.Host;
 import com.cyberscope.model.Port;
 import com.cyberscope.model.ScanType;
@@ -67,15 +69,16 @@ public final class App {
 
     /** What the invocation asked for. Exactly one applies. */
     private enum Mode {
-        SCAN,
-        HISTORY,
-        SHOW,
-        DELETE,
-        DIFF,
-        COMPARE,
-        UPDATE_CVE_INDEX,
-        CVE_INDEX_STATUS
-    }
+    SCAN,
+    HISTORY,
+    SHOW,
+    DELETE,
+    DIFF,
+    COMPARE,
+    UPDATE_CVE_INDEX,
+    CVE_INDEX_STATUS,
+    UPDATE_EXPLOIT_SIGNALS
+}
 
     private App() {
     }
@@ -123,6 +126,8 @@ public final class App {
                 case "--update-cve-index" -> mode = Mode.UPDATE_CVE_INDEX;
 
                 case "--cve-index-status" -> mode = Mode.CVE_INDEX_STATUS;
+
+                case "--update-exploit-signals" -> mode = Mode.UPDATE_EXPLOIT_SIGNALS;
 
                 case "--cve-index" -> {
                     if (i + 1 >= args.length) {
@@ -276,6 +281,8 @@ public final class App {
 
             case CVE_INDEX_STATUS ->
                     cveIndexStatus(cveIndexPath);
+
+            case UPDATE_EXPLOIT_SIGNALS -> updateExploitSignals(cveIndexPath);        
 
             case SCAN ->
                     scan(
@@ -521,9 +528,7 @@ public final class App {
             Thread.currentThread().interrupt();
 
             System.err.println();
-            System.err.println(
-                    "[!] Cancelled. The previous index is untouched."
-            );
+            System.err.println("[!] Cancelled. The previous index is untouched.");
 
             return EXIT_OK;
 
@@ -533,6 +538,65 @@ public final class App {
             System.err.println("[!!] " + e.getMessage());
 
             return EXIT_DATABASE_ERROR;
+        }
+    }
+
+        /** Refreshes only the fast-moving exploitation feeds. */
+    private static int updateExploitSignals(Path cveIndexPath) {
+        try {
+            CveIndexManager manager = new CveIndexManager(cveIndexPath);
+            System.out.println("[..] Refreshing exploitation data (KEV and EPSS)");
+            System.out.println();
+            return refreshExploitSignals(manager, "     ");
+        } catch (RepositoryException e) {
+            System.err.println("[!!] " + e.getMessage());
+            return EXIT_DATABASE_ERROR;
+        }
+    }
+
+    /**
+     * Downloads KEV and EPSS into an existing index.
+     *
+     * <p>Separate from the corpus rebuild because the cost differs by a factor of
+     * twenty-five: the corpus is ~100 MB and about fifty seconds, these two are
+     * ~4 MB and about two. EPSS recomputes every score daily, so this is the one
+     * worth running often.
+     */
+    private static int refreshExploitSignals(CveIndexManager manager, String indent) {
+        try {
+            // Carriage-return overwriting only works on a terminal. Piped to a
+            // file or a log, "\r" is just a byte, and four progress lines end up
+            // concatenated into one unreadable line -- which is exactly what the
+            // first run of this looked like.
+            boolean interactive = System.console() != null;
+            ExploitFeedLoader.Result result = new ExploitFeedLoader(manager)
+                    .refresh(stage -> {
+                        if (interactive) {
+                            System.out.printf("\r%s%-38s", indent, stage);
+                        } else {
+                            System.out.println(indent + stage);
+                        }
+                    });
+            if (interactive) {
+                System.out.printf("\r%s%-38s%n", indent, "");
+            }
+            System.out.printf("[ok] KEV: %,d entries (%,d used in ransomware)%n",
+                    result.kevCount(), result.kevRansomware());
+            System.out.printf("     EPSS: %,d scores stored, %,d skipped (not in the corpus)%n",
+                    result.epssCount(), result.epssSkipped());
+            System.out.printf("     %.1f s%n", result.elapsed().toMillis() / 1000.0);
+            return EXIT_OK;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            System.err.println();
+            System.err.println("[!] Cancelled. The previous exploitation data is untouched.");
+            return EXIT_OK;
+        } catch (RepositoryException e) {
+            System.err.println();
+            System.err.println("[!] Exploitation data was NOT refreshed: " + e.getMessage());
+            // The corpus is intact and CVE mapping still works, so this is not a
+            // failed run -- just a less informed one. Reported, not fatal.
+            return EXIT_OK;
         }
     }
 
@@ -579,6 +643,25 @@ public final class App {
             System.out.println(
                     "  Source: " + metadata.source()
             );
+
+            System.out.println();
+            System.out.println("Exploitation data:");
+            boolean any = false;
+            for (String feed : new String[]{ExploitFeedLoader.SOURCE_KEV,
+                                            ExploitFeedLoader.SOURCE_EPSS}) {
+                java.util.Optional<FeedMetadata> fm = repository.feedMetadata(feed);
+                if (fm.isPresent()) {
+                    any = true;
+                    System.out.println("  " + fm.get().describe(Instant.now(),
+                                                                ZoneId.systemDefault()));
+                }
+            }
+            if (!any) {
+                System.out.println("  Not loaded. Run --update-exploit-signals.");
+                System.out.println("  Without it every finding reads as 'not known to be"
+                                 + " exploited', which is");
+                System.out.println("  a statement about this index rather than about the world.");
+            }
 
             return EXIT_OK;
 

@@ -148,6 +148,6 @@ public final class CpeMatcher {
                 Severity.fromNvd(row.cvssSeverity()),
                 row.cvssScore(), row.cvssVector(), row.cvssVersion(),
                 row.published(), row.description(),
-                precision, row.range().describe());
+                precision, row.range().describe(), row.signal());
     }
 }

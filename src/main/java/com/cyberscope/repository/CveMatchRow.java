@@ -1,7 +1,7 @@
 package com.cyberscope.repository;
 
+import com.cyberscope.model.ExploitSignal;
 import com.cyberscope.model.VersionRange;
-
 import java.time.Instant;
 
 /**
@@ -29,17 +29,37 @@ public record CveMatchRow(String cveId,
                           String cvssVector, String cvssVersion,
                           Instant published, String description,
                           String vendor, String product,
-                          VersionRange range) {
+                          VersionRange range, ExploitSignal signal) {
+
+                   public CveMatchRow(String cveId,
+                   Double cvssScore,
+                   String cvssSeverity,
+                   String cvssVector,
+                   String cvssVersion,
+                   Instant published,
+                   String description,
+                   String vendor,
+                   String product,
+                   VersionRange range) {
+    this(cveId, cvssScore, cvssSeverity, cvssVector, cvssVersion,
+            published, description, vendor, product, range,
+            ExploitSignal.UNKNOWN);
+}
 
     public CveMatchRow {
-        if (cveId == null || cveId.isBlank()) {
-            throw new IllegalArgumentException("cveId must not be blank");
-        }
-        if (range == null) {
-            throw new IllegalArgumentException("range must not be null");
-        }
-        description = description == null ? "" : description;
+    if (cveId == null || cveId.isBlank()) {
+        throw new IllegalArgumentException("cveId must not be blank");
     }
+    if (range == null) {
+        throw new IllegalArgumentException("range must not be null");
+    }
+
+    // Never null. A caller asking "is this exploited" must get an answer,
+    // and ExploitSignal.UNKNOWN is that answer when NVD provides no signal.
+    signal = signal == null ? ExploitSignal.UNKNOWN : signal;
+
+    description = description == null ? "" : description;
+}
 
     /** The canonical NVD page, for the report and for a clickable cell later. */
     public String nvdUrl() {

@@ -44,10 +44,11 @@ public final class CveIndexManager {
      *
      * <p>Bump this and add an entry to {@link #MIGRATION_RESOURCES} together.
      */
-    private static final int SCHEMA_VERSION = 1;
+    private static final int SCHEMA_VERSION = 2;
 
-    private static final Map<Integer, String> MIGRATION_RESOURCES = Map.of(
-            1, "/db/cve-migrations/V1__product_lookup_index.sql");
+     private static final Map<Integer, String> MIGRATION_RESOURCES = Map.of(
+            1, "/db/cve-migrations/V1__product_lookup_index.sql",
+            2, "/db/cve-migrations/V2__exploit_signals.sql");
 
     private final Path indexFile;
 

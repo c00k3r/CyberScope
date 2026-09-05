@@ -165,8 +165,8 @@ class CveIndexTest {
         @DisplayName("a fresh index is migrated, not stamped as current")
         void migrationsRunOnNewDatabases() throws Exception {
             CveIndexManager m = manager();
-            assertEquals(1, m.schemaVersion(),
-                    "a new index must walk 0 -> 1 like every other index");
+            assertEquals(2, m.schemaVersion(),
+        "a new index must walk 0 -> 1 -> 2 through the migration chain");
             assertTrue(Files.exists(m.indexFile()));
         }
 
@@ -174,9 +174,9 @@ class CveIndexTest {
         @DisplayName("reopening does not re-run migrations or lose data")
         void reopenIsIdempotent() throws Exception {
             CveIndexManager first = manager();
-            assertEquals(1, first.schemaVersion());
+            assertEquals(2, first.schemaVersion());
             CveIndexManager second = manager();
-            assertEquals(1, second.schemaVersion());
+            assertEquals(2, second.schemaVersion());
         }
 
         /**
@@ -192,7 +192,7 @@ class CveIndexTest {
 
             CveIndexManager m = new CveIndexManager(file);
 
-            assertEquals(1, m.schemaVersion());
+            assertEquals(2, m.schemaVersion());
             assertTrue(Files.size(file) > 0);
         }
 
