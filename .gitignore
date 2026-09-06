@@ -40,3 +40,10 @@ target/
 *.db
 *.db.building
 docs/*.tmp
+
+target/
+*.db
+*.db-journal
+*.sqlite
+.cyberscope/
+*.xml.scan
