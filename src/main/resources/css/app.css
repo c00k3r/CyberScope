@@ -1,121 +1,247 @@
 /* =====================================================================
    CyberScope - application stylesheet
    =====================================================================
- 
+
    JavaFX CSS is NOT web CSS. Two differences matter here:
- 
+
      * There are no custom properties. `--accent: red` and `var(--accent)`
        do nothing. The JavaFX equivalent is a LOOKED-UP COLOUR: a name
        starting with `-` defined on an ancestor, which every descendant
        inherits and can reference directly. That is what the block below
-       is. It is resolved at style-application time, so redefining these
-       eight names under a different root style class is all a dark theme
-       would need -- which is why they are defined once, here, and never
-       repeated as literals further down.
- 
+       is. It is resolved at style-application time, so retheming the whole
+       application is an edit to that one block -- which is why the colours
+       are defined once, here, and never repeated as literals further down.
+
      * Properties are `-fx-` prefixed and the set is much smaller than the
        web's. There is no flexbox, no grid, no box-shadow spread; layout
        lives in Java, and this file only controls appearance.
- 
+
    COLOUR IS USED FOR MEANING, NOT DECORATION. The only two hues in the
    results table are the ones that encode CyberScope's central claim:
    green for a service that was probed and confirmed, amber for one that
    was inferred from the port number. Everything else is greyscale so
    those two stand out.
- 
-   Every foreground/background pair below was checked against WCAG 2.1
-   and clears AA (worst pair 4.77:1, against a 4.5:1 requirement).
+
+   ---------------------------------------------------------------------
+   THIS FILE IS LINTED. See StylesheetTest, which fails the build on:
+
+     1. a `-cs-` name that is used and never defined
+     2. a `-cs-` name that is defined and never used
+     3. any colour literal in a colour-valued property outside `.root`
+     4. a style class named in Styles.java with no rule here
+
+   Rule 1 exists because JavaFX SILENTLY DROPS a declaration whose
+   looked-up colour does not resolve. `-cs-worse` and `-cs-better` were
+   used by the comparison view and the vulnerability column and defined by
+   nothing, so both features shipped with their colour coding inert. There
+   is no warning and no log line; the cell simply inherits and looks like a
+   deliberate choice. Rule 3 exists because one stray `#fafbfd` is
+   invisible in a light theme and glows in a dark one.
+
+   Contrast: all 22 foreground/background pairs were measured against
+   WCAG 2.1 and clear AA at normal text size. Worst pair is danger text on
+   a selected row, 4.99:1, against a 4.5:1 requirement.
    ===================================================================== */
- 
+
 .root {
     /* --- surfaces --- */
-    -cs-bg:            #f4f6f9;   /* window background            */
-    -cs-surface:       #ffffff;   /* tables, inputs               */
-    -cs-panel:         #eef1f5;   /* history pane                 */
-    -cs-border:        #d3d9e2;
-    -cs-border-strong: #b9c1cd;
- 
+    -cs-bg:            #0f1420;   /* window background            */
+    -cs-panel:         #131a28;   /* sidebar, status bar          */
+    -cs-surface:       #182031;   /* tables, inputs, cards        */
+    -cs-surface-alt:   #1e2839;   /* row striping, hover          */
+    -cs-selection:     #1e3a5f;   /* the selected row             */
+    -cs-border:        #253044;
+    -cs-border-strong: #33415c;
+
     /* --- text --- */
-    -cs-text:          #1c2430;
-    -cs-text-muted:    #5a6472;
- 
+    -cs-text:          #e2e8f2;
+    -cs-text-muted:    #8593a8;
+
     /* --- meaning --- */
-    -cs-accent:        #1f4fbf;   /* primary action, selection    */
-    -cs-probed:        #0f6b3a;   /* evidence: verified           */
-    -cs-inferred:      #8a5a00;   /* evidence: guessed            */
-    -cs-danger:        #a3231c;
-    -cs-warn-bg:       #fff7e0;
-    -cs-warn-fg:       #6f5200;
- 
+    -cs-accent:        #38bdf8;   /* primary action, selection    */
+    -cs-on-accent:     #08131c;   /* text ON the accent fill      */
+    -cs-probed:        #34d399;   /* evidence: verified           */
+    -cs-inferred:      #fbbf24;   /* evidence: guessed            */
+    -cs-danger:        #fb8a8a;   /* CRITICAL: exploited today  */
+    -cs-high:          #fb923c;   /* HIGH: very likely exploit  */
+    -cs-warn-bg:       #2a2213;
+    -cs-warn-fg:       #fbbf24;
+
     -fx-background-color: -cs-bg;
     -fx-font-size: 13px;
     -fx-text-fill: -cs-text;
- 
+
     /* NO -fx-font-family here, deliberately.
        JavaFX does NOT fall back through a font stack the way a browser does.
        Measured on this project:
- 
+
          "JetBrains Mono", "DejaVu Sans Mono", monospace  ->  System
          "Nonexistent Font", "DejaVu Sans Mono"           ->  System
          "DejaVu Sans Mono"                               ->  DejaVu Sans Mono
          monospace                                        ->  Monospaced
- 
+
        It takes the FIRST family and, if that is missing, drops to the default --
        it never tries the second. So a web-style stack is worse than useless: it
        silently discards the font you wanted AND the fallback you provided.
- 
+
        That leaves two safe options: name one font you are certain is installed
        everywhere the app runs (there is no such font across Windows, macOS and
        Linux), or use a CSS generic, which JavaFX maps to a JVM logical font that
        always resolves. Omitting the family entirely means the platform's own UI
        font, which is what a desktop application should look like anyway. */
 }
- 
+
+/* =====================================================================
+   SHELL: sidebar and page frame
+   ===================================================================== */
+
+.app-shell {
+    -fx-background-color: -cs-bg;
+}
+
+.sidebar {
+    -fx-background-color: -cs-panel;
+    -fx-border-color: transparent -cs-border transparent transparent;
+}
+
+.wordmark {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -cs-text;
+}
+
+/* The standing constraint. Amber, because it is the same kind of statement
+   as an inferred service: something the tool cannot verify for you. */
+.scope-note {
+    -fx-font-size: 11px;
+    -fx-text-fill: -cs-inferred;
+}
+
+.nav-item {
+    -fx-background-radius: 6px;
+    -fx-cursor: hand;
+}
+
+.nav-item:hover {
+    -fx-background-color: -cs-surface;
+}
+
+.nav-label {
+    -fx-text-fill: -cs-text-muted;
+    -fx-font-size: 13px;
+}
+
+/* Icons take their colour from CSS so Icons.java holds no palette.
+   -fx-stroke, not -fx-fill: every icon is an outline, never a solid. */
+.nav-icon {
+    -fx-stroke: -cs-text-muted;
+}
+
+/* The active row. THREE cues, not one: a filled background, a brighter
+   label, and a coloured icon. Background alone is a ~1.4:1 difference on a
+   dark theme, which is easy to lose on a dim laptop screen. */
+.nav-active {
+    -fx-background-color: -cs-selection;
+}
+
+.nav-active .nav-label {
+    -fx-text-fill: -cs-text;
+    -fx-font-weight: bold;
+}
+
+.nav-active .nav-icon {
+    -fx-stroke: -cs-accent;
+}
+
+.nav-blocked {
+    -fx-opacity: 0.42;
+    -fx-cursor: default;
+}
+
+.page {
+    -fx-background-color: -cs-bg;
+}
+
+.page-header {
+    -fx-border-color: transparent transparent -cs-border transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.page-title {
+    -fx-font-size: 19px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -cs-text;
+}
+
+/* A ScrollPane paints its own viewport background from Modena, which the
+   .root fill does not reach. Left alone it is a white rectangle. */
+.page-scroll,
+.page-scroll .viewport {
+    -fx-background-color: -cs-bg;
+}
+
+.page-scroll {
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+/* Body copy. Line spacing, because the About page is the only place in the
+   application with paragraphs and default JavaFX leading is tight. */
+.prose {
+    -fx-text-fill: -cs-text-muted;
+    -fx-line-spacing: 3px;
+}
+
 /* =====================================================================
    TYPE
    ===================================================================== */
- 
+
 .label {
     -fx-text-fill: -cs-text;
 }
- 
+
 .section-title {
     -fx-font-weight: bold;
     -fx-font-size: 13px;
 }
- 
+
 .muted {
     -fx-text-fill: -cs-text-muted;
     -fx-font-size: 12px;
 }
- 
+
 /* The range hint under the target field: informative, not urgent. */
 .hint-label {
     -fx-text-fill: -cs-text-muted;
     -fx-font-size: 12px;
 }
- 
+
 /* Nmap warnings and the "inferred, not probed" caveat. Given a tinted
    background rather than just coloured text -- a caveat about evidence
-   quality should be hard to skim past. */
+   quality should be hard to skim past.
+
+   The left bar is the amber at full strength. In the light theme it was
+   derive(-cs-warn-fg, 70%), a pale wash against a near-white tint; on a
+   dark tint the same expression brightens toward white and the bar stops
+   reading as amber at all. See the note on derive() under BUTTONS. */
 .warning-label {
     -fx-text-fill: -cs-warn-fg;
     -fx-background-color: -cs-warn-bg;
-    -fx-border-color: derive(-cs-warn-fg, 70%);
+    -fx-border-color: -cs-warn-fg;
     -fx-border-width: 0 0 0 3px;
     -fx-padding: 6px 10px 6px 10px;
     -fx-font-size: 12px;
 }
- 
+
 .summary-label {
     -fx-font-size: 14px;
     -fx-font-weight: bold;
 }
- 
+
 /* =====================================================================
    INPUTS
    ===================================================================== */
- 
+
 .text-field, .combo-box-base {
     -fx-background-color: -cs-surface;
     -fx-border-color: -cs-border-strong;
@@ -123,73 +249,105 @@
     -fx-background-radius: 4px;
     -fx-padding: 6px 8px 6px 8px;
 }
- 
+
+/* Modena paints the caret and the typed text from its own -fx-text-fill,
+   which .root's value does not reach. On a dark field that leaves black
+   text in a black box. */
+.text-field {
+    -fx-text-fill: -cs-text;
+    -fx-prompt-text-fill: -cs-text-muted;
+    -fx-highlight-fill: -cs-selection;
+    -fx-highlight-text-fill: -cs-text;
+}
+
 .text-field:focused, .combo-box-base:focused {
     -fx-border-color: -cs-accent;
     -fx-border-width: 1.5px;
 }
- 
+
 /* A target is an address. Proportional digits make 192.168.1.1 and
    192.168.11.1 hard to tell apart at a glance. */
 .target-field {
     /* A generic, not a family name -- see the note in .root. */
     -fx-font-family: monospace;
 }
- 
+
 .check-box {
     -fx-text-fill: -cs-text;
 }
- 
+
+.check-box .box {
+    -fx-background-color: -cs-surface;
+    -fx-border-color: -cs-border-strong;
+    -fx-border-radius: 3px;
+    -fx-background-radius: 3px;
+}
+
+.check-box:selected .mark {
+    -fx-background-color: -cs-accent;
+}
+
 /* =====================================================================
    BUTTONS
-   ===================================================================== */
- 
+   =====================================================================
+
+   A NOTE ON derive(), which is the part a token block does NOT save you
+   from. derive(colour, n%) brightens for positive n and darkens for
+   negative n. Those signs are correct relative to a THEME, not to a
+   colour: on a light surface a hover state gets darker, on a dark one it
+   gets lighter. Every derive() in this file had the wrong sign after the
+   palette flip, and no linter can catch that -- a wrong-signed derive is
+   a valid expression producing a legal colour. It has to be looked at. */
+
 .button {
     -fx-background-color: -cs-surface;
     -fx-border-color: -cs-border-strong;
+    -fx-text-fill: -cs-text;
     -fx-border-radius: 4px;
     -fx-background-radius: 4px;
     -fx-padding: 6px 16px 6px 16px;
     -fx-cursor: hand;
 }
- 
+
 .button:hover {
     -fx-border-color: -cs-accent;
 }
- 
+
 .button:disabled {
     -fx-opacity: 0.45;
     -fx-cursor: default;
 }
- 
+
 /* The one primary action in the window. Exactly one thing should look
-   like the thing to click. */
+   like the thing to click. The accent is a light cyan, so the text on it
+   is the darkest token in the palette, not white -- white on #38bdf8 is
+   1.7:1 and unreadable. */
 .button.primary {
     -fx-background-color: -cs-accent;
     -fx-border-color: -cs-accent;
-    -fx-text-fill: white;
+    -fx-text-fill: -cs-on-accent;
     -fx-font-weight: bold;
 }
- 
+
 .button.primary:hover {
-    -fx-background-color: derive(-cs-accent, -12%);
+    -fx-background-color: derive(-cs-accent, 12%);
 }
- 
+
 /* Stop and Delete: destructive, but not shouty. Outlined rather than
    filled, because an always-red button trains people to ignore red. */
 .button.destructive {
     -fx-text-fill: -cs-danger;
-    -fx-border-color: derive(-cs-danger, 55%);
+    -fx-border-color: derive(-cs-danger, -35%);
 }
- 
+
 .button.destructive:hover {
     -fx-border-color: -cs-danger;
 }
- 
+
 /* =====================================================================
    RESULTS TABLE
    ===================================================================== */
- 
+
 .table-view {
     -fx-background-color: -cs-surface;
     -fx-border-color: -cs-border;
@@ -198,45 +356,53 @@
     /* JavaFX draws a 1px inner border of its own on top of ours. */
     -fx-table-cell-border-color: transparent;
 }
- 
+
 .table-view .column-header-background {
-    -fx-background-color: #e8ecf2;
+    -fx-background-color: -cs-panel;
     -fx-background-radius: 4px 4px 0 0;
 }
- 
+
 .table-view .column-header {
     -fx-background-color: transparent;
     -fx-border-color: transparent -cs-border transparent transparent;
     -fx-size: 30px;
 }
- 
+
 .table-view .column-header .label {
-    -fx-text-fill: #3a4453;
+    -fx-text-fill: -cs-text-muted;
     -fx-font-weight: bold;
     -fx-font-size: 12px;
     -fx-alignment: center-left;
     -fx-padding: 0 0 0 4px;
 }
- 
+
 .table-row-cell {
     -fx-cell-size: 28px;
+    -fx-background-color: -cs-surface;
     -fx-border-color: transparent transparent -cs-border transparent;
 }
- 
+
 .table-row-cell:odd {
-    -fx-background-color: #fafbfd;
+    -fx-background-color: -cs-surface-alt;
 }
- 
+
 .table-row-cell:selected {
-    -fx-background-color: #dbe7ff;
+    -fx-background-color: -cs-selection;
     -fx-text-fill: -cs-text;
 }
- 
+
+/* An empty recycled row must not paint a divider, or the table looks like
+   it holds blank rows below the data. */
+.table-row-cell:empty {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
 /* Selection must not repaint the semantic colours below into white. */
 .table-row-cell:selected .table-cell {
     -fx-text-fill: -cs-text;
 }
- 
+
 /* Modena sets .table-cell's text fill to its own -fx-text-background-color, so
    the -fx-text-fill on .root never reaches here. Set it explicitly, or the
    table quietly uses a colour that is not in the palette. */
@@ -246,21 +412,21 @@
     -fx-alignment: center-left;
     -fx-border-color: transparent;
 }
- 
+
 /* Port numbers: monospaced so the column reads as a column. */
 .table-cell.port-cell {
     -fx-font-family: monospace;
 }
- 
+
 /* --- the two cells that carry meaning ------------------------------- */
- 
+
 /* A service CyberScope actually probed and got a banner back from. */
 .table-cell.evidence-probed,
 .table-row-cell:selected .table-cell.evidence-probed {
     -fx-text-fill: -cs-probed;
     -fx-font-weight: bold;
 }
- 
+
 /* A service inferred from the port number. Nmap reports these
    identically to probed ones by default; surfacing the difference is the
    whole point of this project, so it is the one place amber appears.
@@ -272,94 +438,305 @@
     -fx-text-fill: -cs-inferred;
     -fx-font-weight: bold;
 }
- 
+
+/* --- comparison ------------------------------------------------------
+   Coloured by what a change means for exposure, not by change type:
+   red for a port that opened, green for one that closed. The Kind column
+   says "host change" or "evidence" in words, so colour is redundant
+   coding here too. */
+
+.table-cell.change-worse,
+.table-row-cell:selected .table-cell.change-worse {
+    -fx-text-fill: -cs-danger;
+    -fx-font-weight: bold;
+}
+
+.table-cell.change-better,
+.table-row-cell:selected .table-cell.change-better {
+    -fx-text-fill: -cs-probed;
+    -fx-font-weight: bold;
+}
+
 .table-view .placeholder .label {
     -fx-text-fill: -cs-text-muted;
 }
- 
+
 /* =====================================================================
    HISTORY PANE
    ===================================================================== */
- 
+
 .history-pane {
     -fx-background-color: -cs-panel;
     -fx-border-color: transparent -cs-border transparent transparent;
 }
- 
+
 .history-pane .list-view {
     -fx-background-color: -cs-surface;
     -fx-border-color: -cs-border;
     -fx-border-radius: 4px;
     -fx-background-radius: 4px;
 }
- 
+
 .history-pane .list-cell {
     -fx-padding: 7px 10px 7px 10px;
+    -fx-text-fill: -cs-text;
     -fx-border-color: transparent transparent -cs-border transparent;
     -fx-background-color: -cs-surface;
 }
- 
+
 .history-pane .list-cell:filled:hover {
-    -fx-background-color: #f0f4fb;
+    -fx-background-color: -cs-surface-alt;
 }
- 
+
 .history-pane .list-cell:filled:selected {
-    -fx-background-color: #dbe7ff;
+    -fx-background-color: -cs-selection;
     -fx-text-fill: -cs-text;
     -fx-border-color: transparent transparent -cs-border transparent;
 }
- 
+
 /* An empty recycled cell must not draw a divider, or the list looks
    like it contains blank rows. */
 .history-pane .list-cell:empty {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
 }
- 
+
 /* =====================================================================
    CHROME
    ===================================================================== */
- 
+
 .split-pane {
     -fx-background-color: -cs-bg;
     -fx-padding: 0;
 }
- 
+
 .split-pane > .split-pane-divider {
     -fx-background-color: -cs-border;
     -fx-padding: 0 1px 0 1px;
 }
- 
+
 .scan-pane {
     -fx-background-color: -cs-bg;
 }
- 
+
 .status-bar {
     -fx-background-color: -cs-panel;
     -fx-border-color: -cs-border transparent transparent transparent;
 }
- 
+
 .status-bar .label {
     -fx-text-fill: -cs-text-muted;
     -fx-font-size: 12px;
 }
- 
+
 .progress-bar > .track {
     -fx-background-color: -cs-border;
     -fx-background-radius: 3px;
 }
- 
+
 .progress-bar > .bar {
     -fx-background-color: -cs-accent;
     -fx-background-radius: 3px;
     -fx-padding: 4px;
 }
- 
+
+/* On a dark UI a tooltip cannot be "the dark one". It has to be lighter
+   than everything under it or it disappears into the window. */
 .tooltip {
-    -fx-background-color: #2b3240;
-    -fx-text-fill: white;
+    -fx-background-color: -cs-border-strong;
+    -fx-text-fill: -cs-text;
     -fx-font-size: 12px;
     -fx-background-radius: 4px;
+}
+
+.scroll-bar {
+    -fx-background-color: -cs-panel;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: -cs-border-strong;
+    -fx-background-radius: 4px;
+}
+
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    -fx-background-color: -cs-text-muted;
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+}
+
+/* =====================================================================
+   DASHBOARD
+   =====================================================================
+
+   SIX BANDS, AND COLOUR IS NEVER THE ONLY SIGNAL. Every chip carries its
+   label, every bar carries its count, and the trend column carries a
+   character as well as a colour -- so the page survives a greyscale
+   screenshot and a colour-blind reader, which is the same rule the
+   Detection column has followed since v0.2.0.
+
+   The band colours run red -> orange -> amber -> cyan -> green, which is
+   an ordered ramp rather than five unrelated hues, because the bands are
+   an ordered scale. Grey sits outside the ramp on purpose: INDETERMINATE
+   is not a position on it, it is the absence of a position.            */
+
+.card {
+    -fx-background-color: -cs-surface;
+    -fx-border-color: -cs-border;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 14px 16px 14px 16px;
+}
+
+.card-title {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -cs-text-muted;
+}
+
+.card-value {
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -cs-text;
+}
+
+.card-note {
+    -fx-font-size: 11px;
+    -fx-text-fill: -cs-text-muted;
+}
+
+/* --- band chips ------------------------------------------------------
+   Tinted background rather than a solid fill, so a row of chips does not
+   read as a row of buttons. derive() darkens the band colour toward the
+   page background; the sign is negative because this is a dark theme --
+   see the note under BUTTONS.                                          */
+
+.band-chip {
+    -fx-padding: 3px 10px 3px 10px;
+    -fx-background-radius: 10px;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.band-critical {
+    -fx-text-fill: -cs-danger;
+    -fx-background-color: derive(-cs-danger, -68%);
+}
+
+.band-high {
+    -fx-text-fill: -cs-high;
+    -fx-background-color: derive(-cs-high, -68%);
+}
+
+.band-elevated {
+    -fx-text-fill: -cs-inferred;
+    -fx-background-color: derive(-cs-inferred, -68%);
+}
+
+.band-low {
+    -fx-text-fill: -cs-accent;
+    -fx-background-color: derive(-cs-accent, -68%);
+}
+
+.band-clear {
+    -fx-text-fill: -cs-probed;
+    -fx-background-color: derive(-cs-probed, -68%);
+}
+
+.band-indeterminate {
+    -fx-text-fill: -cs-text-muted;
+    -fx-background-color: derive(-cs-text-muted, -68%);
+}
+
+/* --- severity bars --------------------------------------------------- */
+
+.bar-track {
+    -fx-background-color: -cs-surface-alt;
+    -fx-background-radius: 3px;
+}
+
+.bar-fill {
+    -fx-background-radius: 3px;
+}
+
+.fill-critical     { -fx-background-color: -cs-danger; }
+.fill-high         { -fx-background-color: -cs-high; }
+.fill-elevated     { -fx-background-color: -cs-inferred; }
+.fill-low          { -fx-background-color: -cs-accent; }
+.fill-unchecked    { -fx-background-color: -cs-border-strong; }
+
+.bar-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -cs-text-muted;
+}
+
+.bar-count {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -cs-text;
+}
+
+/* --- coverage ring ---------------------------------------------------
+   Stroked arcs, not a filled pie. A pie chart of one number is a circle
+   with a bite out of it, and the bite is the part people misread.      */
+
+.ring-track {
+    -fx-stroke: -cs-surface-alt;
+}
+
+.ring-fill {
+    -fx-stroke: -cs-accent;
+}
+
+.ring-fill-poor {
+    -fx-stroke: -cs-inferred;
+}
+
+.ring-value {
+    -fx-font-size: 19px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -cs-text;
+}
+
+/* --- recommended actions --------------------------------------------- */
+
+.action-rank {
+    -fx-font-family: monospace;
+    -fx-font-size: 11px;
+    -fx-text-fill: -cs-text-muted;
+}
+
+.action-text {
+    -fx-font-size: 12px;
+    -fx-text-fill: -cs-text;
+}
+
+.action-why {
+    -fx-font-size: 11px;
+    -fx-text-fill: -cs-text-muted;
+}
+
+/* --- trend -----------------------------------------------------------
+   Only a real deterioration gets a colour. An improvement is green, and
+   everything else -- unchanged, first scan, not comparable -- is grey,
+   because three greys are easier to skim past than three more hues.    */
+
+.trend-worse  { -fx-text-fill: -cs-danger; -fx-font-weight: bold; }
+.trend-better { -fx-text-fill: -cs-probed; -fx-font-weight: bold; }
+.trend-flat   { -fx-text-fill: -cs-text-muted; }
+
+/* --- staleness -------------------------------------------------------
+   Same amber as an inferred service, and for the same reason: an old
+   scan is not evidence about now.                                      */
+
+.stale { -fx-text-fill: -cs-inferred; }
+
+.empty-state {
+    -fx-font-size: 13px;
+    -fx-text-fill: -cs-text-muted;
 }
 
 /* --- vulnerabilities -----------------------------------------------------
@@ -367,15 +744,20 @@
    as evidence-inferred. Both mean the same thing to a reader: this cell is not
    evidence. A separate colour would invite the eye to treat "we could not look
    this up" as its own category rather than as another kind of not-knowing.
-   The text says which in every case, so nothing is lost in greyscale.        */
+   The text says which in every case, so nothing is lost in greyscale.
+
+   These two used -cs-worse and -cs-better, which were never defined anywhere.
+   They are not renamed here, they are DELETED: `.change-worse` directly above
+   already spells the same idea as -cs-danger and `.change-better` as -cs-probed,
+   so a parallel vocabulary was the reason the typo was invisible in review.   */
 
 .vuln-severe {
-    -fx-text-fill: -cs-worse;
+    -fx-text-fill: -cs-danger;
     -fx-font-weight: bold;
 }
 
 .vuln-clean {
-    -fx-text-fill: -cs-better;
+    -fx-text-fill: -cs-probed;
 }
 
 .index-bar {
@@ -393,5 +775,3 @@
     -fx-text-fill: -cs-inferred;
     -fx-font-weight: bold;
 }
- 
-
