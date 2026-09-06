@@ -43,20 +43,19 @@ public final class AppShell {
         this.scanPage = new ScanPage(context);
         register(scanPage);
         register(new AboutPage(context));
-        register(new PlaceholderPage(PageId.VULNERABILITIES,
-                "Every finding across all targets in one filterable list, with its "
-                + "KEV and EPSS status. Lands in v0.6.0 Part 4."));
-        register(new PlaceholderPage(PageId.SETTINGS,
-                "Scan defaults, where the databases live, and manual control of the "
-                + "CVE and exploit feeds. Lands in v0.6.0 Part 4."));
+        register(new SettingsPage(context, context.preferences()));
 
-        // Built after the placeholders so they replace one if it can be shown.
+        // The three pages that read stored scans. Navigation already refuses to
+        // open them without a database; the placeholder is what the sidebar
+        // shows behind that refusal, carrying the reason.
         if (context.hasScans()) {
             register(new DashboardPage(context));
             register(new HistoryPage(context));
+            register(new VulnerabilitiesPage(context));
         } else {
             register(new PlaceholderPage(PageId.DASHBOARD, context.scansUnavailable()));
             register(new PlaceholderPage(PageId.HISTORY, context.scansUnavailable()));
+            register(new PlaceholderPage(PageId.VULNERABILITIES, context.scansUnavailable()));
         }
 
         Sidebar sidebar = new Sidebar(navigation);

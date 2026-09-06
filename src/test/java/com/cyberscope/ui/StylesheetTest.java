@@ -1,10 +1,13 @@
 package com.cyberscope.ui;
 
+import javafx.css.CssParser;
+import javafx.css.Stylesheet;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -261,7 +264,57 @@ class StylesheetTest {
     }
 
     // ------------------------------------------------------------------
-    // 5. the parser itself
+    // 5. the renderer's own parser keeps every rule
+    // ------------------------------------------------------------------
+
+    /**
+     * The rule that would have caught the worst CSS bug this project has had.
+     *
+     * <p>The four rules above are enforced by the hand-written parser in this
+     * class. That parser is not the one JavaFX uses, and the gap between them is
+     * where a whole stylesheet went missing:
+     *
+     * <pre>
+     *   WARNING: CSS Error parsing app.css: Expected LBRACE at [295,4]
+     *   rules parsed by JavaFX: 31
+     *   blocks in the file    : 117
+     * </pre>
+     *
+     * A selector broken across two lines at a combinator -- legal in web CSS,
+     * rejected by JavaFX -- made the parser <b>abandon the remainder of the
+     * file</b>. Eighty-six rules vanished, the application rendered from line 295
+     * down in Modena's light defaults, and every check in this class still
+     * passed, because a text parser reading line by line does not care where the
+     * renderer gave up.
+     *
+     * <p>The fix is to stop guessing and ask the renderer. {@link CssParser} is
+     * public API in {@code javafx.css} and needs no toolkit and no display, so
+     * the real parser runs in a plain unit test. If it keeps fewer rules than the
+     * file has blocks, something was dropped -- and the message says where it
+     * stopped, which is the line to look at.
+     */
+    @Test
+    @DisplayName("JavaFX's own parser keeps every rule in the file")
+    void javaFxParsesEveryRule() throws IOException {
+        URL url = StylesheetTest.class.getResource(SHEET);
+        assertTrue(url != null, SHEET + " is not on the test classpath");
+
+        Stylesheet parsed = new CssParser().parse(url);
+        long blocks = source().chars().filter(c -> c == '{').count();
+        int kept = parsed.getRules().size();
+
+        String lastKept = kept == 0 ? "(nothing)"
+                : String.valueOf(parsed.getRules().get(kept - 1).getSelectors());
+        assertEquals(blocks, kept,
+                "JavaFX kept " + kept + " of " + blocks + " rules. It stops at the first "
+              + "selector it cannot parse and DISCARDS THE REST OF THE FILE, at WARNING "
+              + "level only. The last rule it accepted was " + lastKept
+              + " -- the breakage is immediately after it. A selector split across "
+              + "lines at a combinator is the usual cause.");
+    }
+
+    // ------------------------------------------------------------------
+    // 6. the parser in this file
     // ------------------------------------------------------------------
 
     @Test

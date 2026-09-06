@@ -42,7 +42,9 @@ public class CyberScopeApp extends Application {
                 screen.getMinX(), screen.getMinY(), screen.getWidth(), screen.getHeight());
 
         stage.setTitle("CyberScope v" + App.VERSION + " - authorised targets only");
-        stage.setScene(new Scene(shell.root(), where.width(), where.height()));
+        Scene scene = new Scene(shell.root(), where.width(), where.height());
+        Styles.apply(scene);          // reaches ComboBox pop-ups, which are their own Scene
+        stage.setScene(scene);
         stage.setMinWidth(where.minWidth());
         stage.setMinHeight(where.minHeight());
         stage.setX(where.x());

@@ -9,6 +9,7 @@ import com.cyberscope.model.TargetPosture;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
@@ -70,6 +71,7 @@ final class DashboardPage implements Page {
 
     private static final int TOP_ACTIONS = 5;
     private static final double RING_RADIUS = 30;
+    private static final double RING_STROKE = 6;
     /**
      * Width of the bar track.
      *
@@ -98,7 +100,7 @@ final class DashboardPage implements Page {
     private final ScrollPane scroll;
     private final Node node;
 
-    private DashboardTask running;
+    private PostureTask running;
 
     DashboardPage(AppContext context) {
         this.context = context;
@@ -170,7 +172,7 @@ final class DashboardPage implements Page {
         if (!context.hasScans() || running != null) {
             return;
         }
-        DashboardTask task = new DashboardTask(context);
+        PostureTask task = new PostureTask(context);
         running = task;
 
         progress.setVisible(true);
@@ -407,28 +409,49 @@ final class DashboardPage implements Page {
      * amber as an inferred service -- both mean "this is not solid evidence".
      */
     private Node coverageRing(Coverage coverage) {
+        double radius = RING_RADIUS - 4;
         double fraction = coverage.fraction();
 
-        Circle track = new Circle(RING_RADIUS - 4);
+        Circle track = new Circle(radius);
         track.setFill(Color.TRANSPARENT);
-        track.setStrokeWidth(6);
+        track.setStrokeWidth(RING_STROKE);
         track.getStyleClass().add(Styles.RING_TRACK);
 
-        Arc fill = new Arc(0, 0, RING_RADIUS - 4, RING_RADIUS - 4, 90, -360 * fraction);
+        // Starts at 12 o'clock and sweeps clockwise, which is how people read a
+        // dial. JavaFX angles are counter-clockwise-positive with 0 at 3 o'clock,
+        // so clockwise is a NEGATIVE length.
+        Arc fill = new Arc(0, 0, radius, radius, 90, -360 * fraction);
         fill.setType(ArcType.OPEN);
         fill.setFill(Color.TRANSPARENT);
-        fill.setStrokeWidth(6);
+        fill.setStrokeWidth(RING_STROKE);
         fill.setStrokeLineCap(StrokeLineCap.ROUND);
         fill.getStyleClass().add(coverage.isAdequate() ? Styles.RING_FILL : Styles.RING_FILL_POOR);
 
         Label value = new Label(coverage.percent() + "%");
         value.getStyleClass().add(Styles.RING_VALUE);
 
-        StackPane ring = new StackPane(track, fill, value);
-        ring.setMinSize(RING_RADIUS * 2, RING_RADIUS * 2);
-        ring.setPrefSize(RING_RADIUS * 2, RING_RADIUS * 2);
-        ring.setMaxSize(RING_RADIUS * 2, RING_RADIUS * 2);
-        return ring;
+        // THIS GROUP IS THE FIX, and it is worth understanding rather than copying.
+        //
+        // A StackPane centres each child by that child's own layout bounds. A full
+        // Circle is symmetric about its centre, so it centres correctly. An Arc is
+        // NOT: a 26% arc from 12 o'clock occupies only the top-right quadrant, so
+        // its bounds are roughly (0,-r)-(r,+0.1r), and StackPane dutifully centred
+        // that quadrant-shaped box in the middle of the pane -- pushing the arc
+        // down and left, straight across the number. The smaller the percentage,
+        // the further off it sat, which is why 57% looked slightly wrong and 26%
+        // looked broken.
+        //
+        // Wrapping both shapes in one Group makes the arc's position relative to
+        // the circle, not to the pane. The Group's bounds are the union, which the
+        // full circle already makes symmetric, so the Group centres correctly and
+        // the arc rides along at its true angle.
+        Group ring = new Group(track, fill);
+
+        StackPane box = new StackPane(ring, value);
+        box.setMinSize(RING_RADIUS * 2, RING_RADIUS * 2);
+        box.setPrefSize(RING_RADIUS * 2, RING_RADIUS * 2);
+        box.setMaxSize(RING_RADIUS * 2, RING_RADIUS * 2);
+        return box;
     }
 
     private HBox bar(String name, int count, int max, String fillStyle) {

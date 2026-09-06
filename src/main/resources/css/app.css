@@ -265,6 +265,56 @@
     -fx-border-width: 1.5px;
 }
 
+/* Modena paints the ComboBox's button cell and its drop-down list from its
+   own light defaults, and NEITHER is reached by .root's -fx-text-fill. The
+   button cell rendered grey-on-dark; the pop-up list rendered white rows
+   behind a dark application.
+
+   The pop-up is the more interesting of the two: it is not a child of the
+   ComboBox at all. It lives in its own PopupWindow with its own Scene, so a
+   stylesheet attached only to the root Parent never reaches it. That is why
+   Styles now attaches to the Scene as well -- see Styles.apply(Scene).
+
+   THE SELECTORS BELOW ARE ON ONE LINE EACH, DELIBERATELY. JavaFX's CSS
+   parser does not accept a selector broken across lines at a combinator.
+   Written over two lines it reports "Expected LBRACE" at WARNING level and
+   then ABANDONS THE REST OF THE FILE -- 86 of this file's 117 rules were
+   silently discarded that way, and the application rendered in Modena's
+   light defaults from this point down. StylesheetTest.javaFxParsesEveryRule
+   now parses the sheet with javafx.css.CssParser and fails the build if the
+   renderer keeps fewer rules than the file contains. */
+
+.combo-box > .list-cell {
+    -fx-text-fill: -cs-text;
+    -fx-padding: 0 4px 0 4px;
+}
+
+.combo-box .arrow,
+.combo-box-base .arrow {
+    -fx-background-color: -cs-text-muted;
+}
+
+.combo-box-popup > .list-view {
+    -fx-background-color: -cs-surface;
+    -fx-border-color: -cs-border-strong;
+    -fx-background-radius: 4px;
+}
+
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell {
+    -fx-background-color: -cs-surface;
+    -fx-text-fill: -cs-text;
+    -fx-padding: 6px 10px 6px 10px;
+}
+
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:hover {
+    -fx-background-color: -cs-surface-alt;
+}
+
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected {
+    -fx-background-color: -cs-selection;
+    -fx-text-fill: -cs-text;
+}
+
 /* A target is an address. Proportional digits make 192.168.1.1 and
    192.168.11.1 hard to tell apart at a glance. */
 .target-field {
@@ -366,6 +416,13 @@
     -fx-background-color: transparent;
     -fx-border-color: transparent -cs-border transparent transparent;
     -fx-size: 30px;
+}
+
+ /* The strip above the vertical scrollbar. Modena leaves it near-white, which
+   on a dark table reads as a rendering fault in the corner of the header. */
+.table-view .filler,
+.table-view .column-header-background .filler {
+    -fx-background-color: -cs-panel;
 }
 
 .table-view .column-header .label {

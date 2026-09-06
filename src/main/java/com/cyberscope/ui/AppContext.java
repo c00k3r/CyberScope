@@ -2,6 +2,7 @@ package com.cyberscope.ui;
 
 import com.cyberscope.repository.CveIndexManager;
 import com.cyberscope.repository.CveRepository;
+import com.cyberscope.repository.Preferences;
 import com.cyberscope.repository.RepositoryException;
 import com.cyberscope.repository.ScanRepository;
 
@@ -49,6 +50,9 @@ public final class AppContext {
     private final CveIndexManager indexManager;      // nullable
     private final CveRepository cveIndex;            // nullable
     private final String indexUnavailable;
+
+    /** Never null: every read falls back to a documented default. */
+    private final Preferences preferences = new Preferences(Preferences.defaultLocation());
 
     /** One background thread for scans and index rebuilds. Daemon, named, single. */
     private final ExecutorService worker = Executors.newSingleThreadExecutor(runnable -> {
@@ -108,6 +112,10 @@ public final class AppContext {
 
     public String indexUnavailable() {
         return indexUnavailable;
+    }
+
+    public Preferences preferences() {
+        return preferences;
     }
 
     public ExecutorService worker() {

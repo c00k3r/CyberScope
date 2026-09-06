@@ -47,3 +47,4 @@ target/
 *.sqlite
 .cyberscope/
 *.xml.scan
+settings.properties

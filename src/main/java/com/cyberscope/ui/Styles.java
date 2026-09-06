@@ -1,6 +1,7 @@
 package com.cyberscope.ui;
 
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 
 import java.net.URL;
 
@@ -134,12 +135,36 @@ final class Styles {
      * someone spend an hour debugging selectors that were never loaded.
      */
     static void apply(Parent root) {
+        root.getStylesheets().add(sheetUrl());
+    }
+
+    /**
+     * Also attaches to the Scene, which is what reaches pop-ups.
+     *
+     * <p>A ComboBox drop-down is not a child of the node that owns it -- it lives
+     * in its own {@code PopupWindow} with its own scene. A stylesheet attached
+     * only to the root {@link Parent} never reaches it, so the list rendered with
+     * Modena's light defaults: white rows behind a dark application. Attaching at
+     * the Scene covers both, and the Parent attachment stays so a view is still
+     * styled when it is used outside a window.
+     */
+    static void apply(Scene scene) {
+        scene.getStylesheets().add(sheetUrl());
+    }
+
+    /**
+     * Fails loudly. A missing stylesheet is a packaging mistake -- the resource
+     * did not make it into {@code target/classes} -- and it produces an unstyled
+     * window that looks like a CSS bug. Better to say so than to let someone
+     * spend an hour debugging selectors that were never loaded.
+     */
+    private static String sheetUrl() {
         URL sheet = Styles.class.getResource(STYLESHEET);
         if (sheet == null) {
             throw new IllegalStateException(
                     "Stylesheet not found on the classpath: " + STYLESHEET
                   + " -- check that src/main/resources is being copied to target/classes");
         }
-        root.getStylesheets().add(sheet.toExternalForm());
+        return sheet.toExternalForm();
     }
 }

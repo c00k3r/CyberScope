@@ -121,7 +121,9 @@ final class ScanPage implements Page {
         targetField.textProperty().addListener((obs, old, now) -> updateRangeHint(now));
 
         scanTypeBox.getItems().setAll(ScanType.values());
-        scanTypeBox.getSelectionModel().select(ScanType.QUICK);
+        // The saved default, not a hardcoded one. Preferences never throws on
+        // read, so a missing or corrupt settings file lands on QUICK.
+        scanTypeBox.getSelectionModel().select(context.preferences().defaultScanType());
         scanTypeBox.setPrefWidth(140);
         scanTypeBox.setConverter(new StringConverter<>() {
             @Override public String toString(ScanType type) {
@@ -131,7 +133,7 @@ final class ScanPage implements Page {
                 return scanTypeBox.getValue();
             }
         });
-        scanTypeBox.setTooltip(new Tooltip(ScanType.QUICK.description()));
+        scanTypeBox.setTooltip(new Tooltip(scanTypeBox.getValue().description()));
         scanTypeBox.valueProperty().addListener((obs, old, now) -> {
             if (now != null) {
                 scanTypeBox.setTooltip(new Tooltip(now.description()));
