@@ -1,6 +1,7 @@
 package com.cyberscope.ui;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -122,6 +123,92 @@ class NavigationTest {
             assertFalse(page.subtitle().isBlank(), page + " has no subtitle");
             assertFalse(page.subtitle().equalsIgnoreCase(page.title()),
                     page + "'s subtitle just repeats its title");
+        }
+    }
+
+    @Nested
+    @DisplayName("arrow-key movement")
+    class Neighbour {
+
+        @Test
+        void movesOneStepInEachDirection() {
+            Navigation nav = new Navigation();
+            assertAll(
+                    () -> assertEquals(PageId.SCAN,
+                            nav.neighbour(PageId.DASHBOARD, +1)),
+                    () -> assertEquals(PageId.DASHBOARD,
+                            nav.neighbour(PageId.SCAN, -1)));
+        }
+
+        @Test
+        @DisplayName("blocked pages are skipped, never landed on")
+        void blockedPagesAreSteppedOver() {
+            // Focusing a row that cannot be opened is a dead end: Enter does
+            // nothing and no feedback explains why.
+            Navigation nav = new Navigation(Map.of(
+                    PageId.SCAN, "nmap missing",
+                    PageId.HISTORY, "no database"));
+
+            assertEquals(PageId.VULNERABILITIES, nav.neighbour(PageId.DASHBOARD, +1));
+        }
+
+        @Test
+        @DisplayName("movement wraps at both ends")
+        void wrapsAround() {
+            Navigation nav = new Navigation();
+            assertAll(
+                    () -> assertEquals(PageId.DASHBOARD, nav.neighbour(PageId.ABOUT, +1)),
+                    () -> assertEquals(PageId.ABOUT, nav.neighbour(PageId.DASHBOARD, -1)));
+        }
+
+        @Test
+        @DisplayName("wrapping still skips blocked pages")
+        void wrappingSkipsBlocked() {
+            Navigation nav = new Navigation(Map.of(PageId.DASHBOARD, "no database"));
+            assertEquals(PageId.SCAN, nav.neighbour(PageId.ABOUT, +1));
+        }
+
+        @Test
+        @DisplayName("with only one reachable page, focus stays put rather than looping")
+        void singleReachablePageIsStable() {
+            Map<PageId, String> blocked = new java.util.EnumMap<>(PageId.class);
+            for (PageId page : PageId.values()) {
+                if (page != PageId.SCAN) {
+                    blocked.put(page, "unavailable");
+                }
+            }
+            Navigation nav = new Navigation(blocked);
+            assertAll(
+                    () -> assertEquals(PageId.SCAN, nav.neighbour(PageId.SCAN, +1)),
+                    () -> assertEquals(PageId.SCAN, nav.neighbour(PageId.SCAN, -1)));
+        }
+
+        @Test
+        @DisplayName("the far end is reachable: the last page, five blocked rows away")
+        void reachesAcrossTheWholeRail() {
+            // The loop bound has to allow size-1 steps, and every case above is
+            // satisfied within two. Without this, `i < size` and `i < size - 1`
+            // are indistinguishable and the bound is untested -- which is how a
+            // rail with several unavailable pages silently stops halfway.
+            List<PageId> pages = new Navigation().pages();
+            PageId first = pages.get(0);
+            PageId last = pages.get(pages.size() - 1);
+
+            Map<PageId, String> blocked = new java.util.EnumMap<>(PageId.class);
+            for (PageId page : pages) {
+                if (page != first && page != last) {
+                    blocked.put(page, "unavailable");
+                }
+            }
+            Navigation nav = new Navigation(blocked);
+            assertAll(
+                    () -> assertEquals(last, nav.neighbour(first, +1)),
+                    () -> assertEquals(last, nav.neighbour(first, -1)));
+        }
+
+        @Test
+        void zeroDirectionIsANoOp() {
+            assertEquals(PageId.SCAN, new Navigation().neighbour(PageId.SCAN, 0));
         }
     }
 

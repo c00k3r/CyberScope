@@ -91,10 +91,17 @@ final class AboutPage implements Page {
                         + "sentences, and only one of them is reassuring."),
 
                 section("This release",
-                        "CyberScope " + App.VERSION + " added the exposure model: CISA KEV and "
-                        + "EPSS alongside the CVE corpus, an exposure band and coverage figure "
-                        + "in place of a score, a sidebar with a dashboard, a full "
-                        + "vulnerability list, and a dark theme.\n\n"
+                        "CyberScope " + App.VERSION + " adds exportable reports. A scan, or the "
+                        + "whole dashboard, can be written to a self-contained HTML file that "
+                        + "carries its own provenance: which index it was scored against, how "
+                        + "old that index is, and how old the scan is. A report that does not "
+                        + "say when its data was current cannot be acted on a month later, so "
+                        + "every caveat travels with the document.\n\n"
+                        + "A network report is not several scan reports stapled together. It "
+                        + "reports the targets that were scanned and never \"your network\": a "
+                        + "host nobody has scanned is absent from it, not counted as clear.\n\n"
+                        + "The sidebar is reachable by keyboard - Tab into it, arrows to move, "
+                        + "Enter to open - and the window reopens where you left it.\n\n"
                         + "Java 21, JavaFX 21, SQLite. Requires Nmap on your PATH.\n"
                         + "Vulnerability data: NVD (public domain), CISA KEV (public domain), "
                         + "EPSS by FIRST.org.\n\n"

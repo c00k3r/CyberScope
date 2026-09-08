@@ -100,10 +100,15 @@ final class DashboardPage implements Page {
     private final ScrollPane scroll;
     private final Node node;
 
+    private final javafx.scene.control.Button exportButton =
+            new javafx.scene.control.Button("Export report");
+    private final ReportExporter exporter;
+    private NetworkPosture current = NetworkPosture.empty();
     private PostureTask running;
 
     DashboardPage(AppContext context) {
         this.context = context;
+        this.exporter = new ReportExporter(context);
 
         statCards.setFillHeight(true);
 
@@ -130,13 +135,17 @@ final class DashboardPage implements Page {
         progress.setManaged(false);
         progress.setPrefWidth(150);
         statusLabel.getStyleClass().add(Styles.MUTED);
-        HBox statusRow = new HBox(10, progress, statusLabel);
+        exportButton.setDisable(true);
+        exportButton.setTooltip(new Tooltip(
+                "Save every target's latest scan as one HTML report."));
+        exportButton.setOnAction(event -> exporter.exportNetwork(ReportExporter.windowOf(exportButton), current));
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox statusRow = new HBox(10, progress, statusLabel, spacer, exportButton);
         statusRow.setAlignment(Pos.CENTER_LEFT);
-        // Collapses entirely when idle, rather than leaving a 14px gap above
-        // the cards for a message that is not there.
-        statusRow.managedProperty().bind(statusRow.visibleProperty());
-        statusRow.visibleProperty().bind(
-                statusLabel.textProperty().isNotEmpty().or(progress.visibleProperty()));
+        // No longer collapses when idle: it carries the export button, which has
+        // to stay reachable whether or not a refresh is running.
 
         body.setPadding(new Insets(14, 20, 20, 20));
         body.getChildren().setAll(statusRow, statCards, middle, targetCard);
@@ -207,6 +216,10 @@ final class DashboardPage implements Page {
     // ------------------------------------------------------------- rendering
 
     private void render(NetworkPosture posture, Instant now, boolean indexAvailable) {
+        current = posture;
+        // Nothing scanned means nothing to put in a report, and an empty document
+        // that says "no scans yet" is not worth a file on someone's disk.
+        exportButton.setDisable(posture.isEmpty());
         // A TableView inside a ScrollPane pulls the viewport to itself when it
         // takes focus, which lands the user halfway down a page they have not
         // read yet. onShown always re-renders, so pinning to the top here is
@@ -236,9 +249,12 @@ final class DashboardPage implements Page {
                 posture.isEmpty() ? "no scans yet"
                                   : posture.band().meaning());
 
+        // Order matters. Telling someone their CVE index is missing when they
+        // have not scanned anything sends them to fix the wrong thing.
         VBox cover = statCard("COVERAGE", coverageRing(coverage),
-                indexAvailable ? coverage.describe()
-                               : "no CVE index - nothing could be checked");
+                posture.isEmpty() ? "no scans yet - nothing to cover"
+                        : indexAvailable ? coverage.describe()
+                        : "no CVE index - nothing could be checked");
 
         VBox targets = statCard("TARGETS", bigNumber(String.valueOf(posture.targets().size())),
                 posture.targetsNeedingAction() + " need attention");
@@ -408,9 +424,24 @@ final class DashboardPage implements Page {
      * <p>The arc turns amber below the adequacy threshold, which is the same
      * amber as an inferred service -- both mean "this is not solid evidence".
      */
+    /**
+     * The ring, and the one case where it must not show a number.
+     *
+     * <p>{@code Coverage.fraction()} returns 1.0 when no services were examined,
+     * and as a model answer that is right: nothing was missed because there was
+     * nothing to miss. Rendered as a full ring reading <b>100%</b> next to "no
+     * scans yet", it stops being that answer and becomes a reassurance about a
+     * host that does not exist -- which is the exact failure this whole release
+     * argues against. A fresh install opened on a green 100%.
+     *
+     * <p>The model is not wrong and is not changed. The renderer is where a
+     * number turns into a claim, so the guard belongs here: nothing examined
+     * means no arc and an em dash, and the caption underneath says why.
+     */
     private Node coverageRing(Coverage coverage) {
         double radius = RING_RADIUS - 4;
-        double fraction = coverage.fraction();
+        boolean known = coverage.isMeasured();
+        double fraction = known ? coverage.fraction() : 0;
 
         Circle track = new Circle(radius);
         track.setFill(Color.TRANSPARENT);
@@ -427,7 +458,7 @@ final class DashboardPage implements Page {
         fill.setStrokeLineCap(StrokeLineCap.ROUND);
         fill.getStyleClass().add(coverage.isAdequate() ? Styles.RING_FILL : Styles.RING_FILL_POOR);
 
-        Label value = new Label(coverage.percent() + "%");
+        Label value = new Label(known ? coverage.percent() + "%" : "—");
         value.getStyleClass().add(Styles.RING_VALUE);
 
         // THIS GROUP IS THE FIX, and it is worth understanding rather than copying.
@@ -445,7 +476,10 @@ final class DashboardPage implements Page {
         // the circle, not to the pane. The Group's bounds are the union, which the
         // full circle already makes symmetric, so the Group centres correctly and
         // the arc rides along at its true angle.
-        Group ring = new Group(track, fill);
+        // The arc is omitted entirely when nothing was examined. A zero-length
+        // Arc still renders its round line cap -- a dot at 12 o'clock that reads
+        // as "a very small amount of coverage" rather than "none measured".
+        Group ring = known ? new Group(track, fill) : new Group(track);
 
         StackPane box = new StackPane(ring, value);
         box.setMinSize(RING_RADIUS * 2, RING_RADIUS * 2);

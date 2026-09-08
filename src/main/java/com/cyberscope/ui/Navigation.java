@@ -113,6 +113,47 @@ public final class Navigation {
         return true;
     }
 
+    /**
+     * The next page a keyboard user should land on.
+     *
+     * <p>Arrow-key movement in a sidebar is not "index + 1". Two rules make it
+     * different, and both are here rather than in {@link Sidebar} so they can be
+     * tested without a display:
+     *
+     * <ul>
+     *   <li><b>Blocked pages are skipped, not landed on.</b> Focusing a row that
+     *       cannot be opened is a dead end -- the user presses Enter, nothing
+     *       happens, and there is no feedback explaining why. Moving past it is
+     *       the only behaviour that does not waste a keystroke.</li>
+     *   <li><b>It wraps.</b> Six items is short enough that running off the end
+     *       and stopping feels like the control broke. Wrapping is what a menu
+     *       does.</li>
+     * </ul>
+     *
+     * @param from      where focus is now
+     * @param direction {@code +1} for down, {@code -1} for up
+     * @return the page to move focus to; {@code from} when nothing else is
+     *         reachable, so a caller can always move focus somewhere
+     */
+    public PageId neighbour(PageId from, int direction) {
+        List<PageId> pages = pages();
+        int size = pages.size();
+        int start = pages.indexOf(Objects.requireNonNull(from, "from"));
+        if (start < 0 || direction == 0) {
+            return from;
+        }
+        int step = direction > 0 ? 1 : -1;
+        // Bounded by size: with every other page blocked this returns `from`
+        // rather than looping forever.
+        for (int i = 1; i < size; i++) {
+            PageId candidate = pages.get(Math.floorMod(start + step * i, size));
+            if (!blocked.containsKey(candidate)) {
+                return candidate;
+            }
+        }
+        return from;
+    }
+
     /** Called after the current page changes, never on a refused navigation. */
     public void onChange(Consumer<PageId> listener) {
         listeners.add(Objects.requireNonNull(listener, "listener"));

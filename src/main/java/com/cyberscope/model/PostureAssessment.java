@@ -29,7 +29,14 @@ public record PostureAssessment(ExposureBand band, Coverage coverage,
         if (band == null || coverage == null) {
             throw new IllegalArgumentException("band and coverage are required");
         }
-        findingsBySeverity = findingsBySeverity == null
+        // EnumMap(Map) throws IllegalArgumentException("Specified map is empty")
+        // when handed an EMPTY map that is not itself an EnumMap -- it has no
+        // other way to learn the key type. Map.of() is exactly that, so a caller
+        // passing the most natural empty map got an exception from a constructor
+        // whose whole job is to accept one. Found by a renderer test that built
+        // a clean report; PostureScorer never hit it because it always builds an
+        // EnumMap first.
+        findingsBySeverity = findingsBySeverity == null || findingsBySeverity.isEmpty()
                 ? new EnumMap<>(Severity.class)
                 : new EnumMap<>(findingsBySeverity);
         ranked = ranked == null ? List.of() : List.copyOf(ranked);

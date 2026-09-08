@@ -57,6 +57,25 @@ public record Coverage(int checked, int examined) {
         return (int) Math.round(fraction() * 100);
     }
 
+    /**
+     * Whether {@link #fraction} is an answer or a convention.
+     *
+     * <p>{@code fraction()} returns 1.0 for a host with no open services, and
+     * for one host that is the right answer: nothing was missed because there
+     * was nothing to miss. Aggregated across a dashboard with no scans in it,
+     * the same 1.0 is not an answer at all -- it is the divide-by-zero fallback
+     * being rendered as <b>100% covered</b> next to "no scans yet", which is
+     * exactly the reassurance this project exists to refuse.
+     *
+     * <p>Both callers are right and they need different things, so the
+     * distinction is named here rather than left to each of them to re-derive
+     * from {@code examined() == 0}. Anything that prints a percentage asks this
+     * first.
+     */
+    public boolean isMeasured() {
+        return examined > 0;
+    }
+
     public boolean isAdequate() {
         return fraction() >= ADEQUATE;
     }

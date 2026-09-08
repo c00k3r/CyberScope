@@ -8,6 +8,7 @@ import com.cyberscope.model.VulnAssessment;
 import com.cyberscope.repository.IndexMetadata;
 import com.cyberscope.repository.RepositoryException;
 import com.cyberscope.service.scanner.ScanOutcome;
+import com.cyberscope.service.score.PostureScorer;
 import com.cyberscope.util.InvalidTargetException;
 import com.cyberscope.util.TargetValidator;
 import com.cyberscope.util.ValidatedTarget;
@@ -71,11 +72,15 @@ final class ScanPage implements Page {
     private final ResultsTable results = new ResultsTable();
 
     private Map<Port, VulnAssessment> lastAssessments = Map.of();
+    private ScanOutcome lastOutcome;
+    private final Button exportButton = new Button("Export report");
+    private final ReportExporter exporter;
     private ScanTask runningTask;
     private final Node node;
 
     ScanPage(AppContext context) {
         this.context = context;
+        this.exporter = new ReportExporter(context);
         buildControls();
 
         VBox top = new VBox(10, targetRow(), rangeHintLabel, authorisedBox, actionRow());
@@ -151,6 +156,19 @@ final class ScanPage implements Page {
         stopButton.setOnAction(event -> stopScan());
         stopButton.setTooltip(new Tooltip("Cancel the running scan and terminate Nmap"));
 
+        // Disabled until there is something to export. A button that produces an
+        // empty report is worse than one that is greyed out.
+        exportButton.setDisable(true);
+        exportButton.setTooltip(new Tooltip(
+                "Save this scan as a self-contained HTML report.\n"
+                + "Open it in a browser and print to PDF if you need one."));
+        exportButton.setOnAction(event -> {
+            if (lastOutcome != null) {
+                exporter.exportScan(ReportExporter.windowOf(exportButton),
+                        lastOutcome, 0L, PostureScorer.score(lastAssessments));
+            }
+        });
+
         progressBar.setVisible(false);
         progressBar.setManaged(false);
         progressBar.setPrefWidth(160);
@@ -202,7 +220,7 @@ final class ScanPage implements Page {
     }
 
     private HBox actionRow() {
-        HBox row = new HBox(12, scanButton, stopButton, progressBar);
+        HBox row = new HBox(12, scanButton, stopButton, exportButton, progressBar);
         row.setAlignment(Pos.CENTER_LEFT);
         return row;
     }
@@ -321,6 +339,8 @@ final class ScanPage implements Page {
             // building the table, so populating it afterwards would render one
             // table with no vulnerability data and never refresh it.
             lastAssessments = task.assessments();
+            lastOutcome = task.getValue();
+            exportButton.setDisable(false);
             showOutcome(task.getValue());
             reportSave(task);
         });
