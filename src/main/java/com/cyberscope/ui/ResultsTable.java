@@ -101,8 +101,15 @@ final class ResultsTable {
         hostColumn = column("Host", 130, PortRow::host);
         hostColumn.setVisible(false);       // shown only for multi-host results
 
+        // A minimum, not just a preference. CONSTRAINED_RESIZE_POLICY makes the
+        // columns always sum to the table width, so a preferred width is a hint
+        // and every column shrinks proportionally when they do not fit. The
+        // history page rendered "808..." for 8080/tcp -- and a truncated port
+        // number is not a cosmetic problem: it is the identifier the whole row
+        // is about.
         TableColumn<PortRow, String> portColumn =
-                column("Port", 85, r -> r.port().number() + "/" + r.port().protocol());
+                column("Port", 88, r -> r.port().number() + "/" + r.port().protocol());
+        portColumn.setMinWidth(88);
         styleCells(portColumn, row -> Styles.PORT_CELL);
 
         // The Detection column is the one place colour carries meaning: green for
@@ -110,7 +117,8 @@ final class ResultsTable {
         // port number. The text still says which, so the colour is redundant
         // coding -- nothing is lost in greyscale or to a colour-blind reader.
         TableColumn<PortRow, String> detectionColumn =
-                column("Detection", 150, r -> describeDetection(r.port().service()));
+                column("Detection", 130, r -> describeDetection(r.port().service()));
+        detectionColumn.setMinWidth(130);
         styleCells(detectionColumn, row -> switch (row.port().service().method()) {
             case PROBED -> Styles.PROBED;
             case TABLE  -> Styles.INFERRED;
@@ -121,7 +129,8 @@ final class ResultsTable {
         // renders an empty cell: "not looked up" and "none filed" are different
         // answers and both are printed, because a blank cell is read as "fine".
         TableColumn<PortRow, String> vulnColumn =
-                column("Vulnerabilities", 165, ResultsTable::describeVulns);
+                column("Vulnerabilities", 140, ResultsTable::describeVulns);
+        vulnColumn.setMinWidth(140);
         styleCells(vulnColumn, ResultsTable::vulnStyle);
 
         table.getColumns().setAll(List.of(

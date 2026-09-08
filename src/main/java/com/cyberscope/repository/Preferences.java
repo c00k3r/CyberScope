@@ -38,6 +38,12 @@ public final class Preferences {
 
     static final String DEFAULT_SCAN_TYPE = "scan.defaultType";
 
+    static final String WINDOW_X = "window.x";
+    static final String WINDOW_Y = "window.y";
+    static final String WINDOW_WIDTH = "window.width";
+    static final String WINDOW_HEIGHT = "window.height";
+    static final String WINDOW_MAXIMIZED = "window.maximized";
+
     private final Path file;
     private final Properties values = new Properties();
 
@@ -90,6 +96,82 @@ public final class Preferences {
      */
     public void setDefaultScanType(ScanType type) throws RepositoryException {
         values.setProperty(DEFAULT_SCAN_TYPE, type == null ? ScanType.QUICK.name() : type.name());
+        save();
+    }
+
+    /**
+     * The window geometry last saved, as {@code {x, y, width, height}}.
+     *
+     * <p>Returns {@code null} when nothing is stored <b>or when any of the four
+     * values is unreadable</b>. Partial geometry is not usable: a width with no
+     * height, or an x that parsed next to a y that did not, would place a window
+     * half from the file and half from the default, which is a position nobody
+     * chose. All four or none.
+     *
+     * <p>What counts as "readable" is deliberately narrow -- a finite number.
+     * The value is a string in a text file the user can edit, so
+     * {@code NaN}, {@code Infinity} and {@code 1e400} are all things
+     * {@code Double.parseDouble} accepts and this method must not return.
+     * {@link com.cyberscope.model.ScanType} aside, this is the only preference
+     * whose bad value can produce an invisible window.
+     */
+    public double[] window() {
+        double x = number(WINDOW_X);
+        double y = number(WINDOW_Y);
+        double width = number(WINDOW_WIDTH);
+        double height = number(WINDOW_HEIGHT);
+        if (Double.isNaN(x) || Double.isNaN(y)
+                || Double.isNaN(width) || Double.isNaN(height)) {
+            return null;
+        }
+        return new double[] {x, y, width, height};
+    }
+
+    /** Whether the window was maximized when it was last closed. */
+    public boolean windowMaximized() {
+        return Boolean.parseBoolean(values.getProperty(WINDOW_MAXIMIZED, "false"));
+    }
+
+    /** {@link Double#NaN} for absent, unparseable, or non-finite. */
+    private double number(String key) {
+        String stored = values.getProperty(key);
+        if (stored == null || stored.isBlank()) {
+            return Double.NaN;
+        }
+        try {
+            double parsed = Double.parseDouble(stored.strip());
+            return Double.isFinite(parsed) ? parsed : Double.NaN;
+        } catch (NumberFormatException e) {
+            return Double.NaN;
+        }
+    }
+
+    /**
+     * Stores where the window was, and writes the file.
+     *
+     * <p>{@code maximized} is kept separately from the four numbers, and the
+     * numbers passed in must be the <b>restored</b> bounds rather than the
+     * maximized ones. Saving the maximized size as the plain size is a
+     * well-known bug in this feature: the window re-opens filling the screen but
+     * not actually maximized, and un-maximizing it does nothing visible because
+     * its restored size is already the size of the screen.
+     */
+    public void setWindow(double x, double y, double width, double height,
+                          boolean maximized) throws RepositoryException {
+        // Math.round(NaN) is 0, so an unshown or half-initialised stage would
+        // otherwise be persisted as a legitimate-looking window at the origin
+        // with no size. Refuse rather than write a value that reads back clean.
+        if (!Double.isFinite(x) || !Double.isFinite(y)
+                || !Double.isFinite(width) || !Double.isFinite(height)) {
+            throw new IllegalArgumentException(
+                    "window geometry must be finite: " + x + "," + y
+                  + " " + width + "x" + height);
+        }
+        values.setProperty(WINDOW_X, String.valueOf(Math.round(x)));
+        values.setProperty(WINDOW_Y, String.valueOf(Math.round(y)));
+        values.setProperty(WINDOW_WIDTH, String.valueOf(Math.round(width)));
+        values.setProperty(WINDOW_HEIGHT, String.valueOf(Math.round(height)));
+        values.setProperty(WINDOW_MAXIMIZED, String.valueOf(maximized));
         save();
     }
 

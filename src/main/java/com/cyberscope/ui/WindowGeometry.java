@@ -91,6 +91,83 @@ final class WindowGeometry {
     }
 
     /**
+     * Re-opens the window where it was left, or falls back to {@link #fit}.
+     *
+     * <p>A saved window position is <b>untrusted input that happens to live in
+     * your own home directory.</b> It was written by a possibly different
+     * version of this program, on a possibly different display arrangement, and
+     * nothing stops a user editing the file. Three concrete ways it goes wrong:
+     *
+     * <ul>
+     *   <li><b>The monitor is gone.</b> Saved at x=2200 on a two-screen desk,
+     *       re-opened on the laptop alone: the window is placed entirely outside
+     *       the only display, and the failure mode is the one this class was
+     *       written for -- a window that exists, has a title, and is never
+     *       painted.</li>
+     *   <li><b>The screen shrank.</b> 1920x1080 saved, projector at 1024x768
+     *       today. A window wider than the screen cannot be dragged back by its
+     *       title bar on every window manager.</li>
+     *   <li><b>The file is nonsense.</b> A hand-edited {@code width=0}, a
+     *       {@code NaN} from a formatting bug, a truncated write. JavaFX accepts
+     *       a zero-sized stage and renders nothing.</li>
+     * </ul>
+     *
+     * So the saved values are treated as a <i>request</i>: size is capped at the
+     * screen, position is clamped so the whole window is on it, and anything
+     * that is not a usable number is discarded in favour of the default
+     * placement. Clamping rather than rejecting matters -- a user who moved the
+     * window slightly off the bottom edge gets it nudged back, not reset to the
+     * centre.
+     *
+     * @param saved   the stored geometry, or {@code null} for "nothing saved"
+     * @return where to actually open
+     */
+    static Placement restore(double[] saved,
+                             double screenX, double screenY,
+                             double screenWidth, double screenHeight) {
+        Placement fallback = fit(screenX, screenY, screenWidth, screenHeight);
+        if (saved == null || saved.length != 4 || !allFinite(saved)) {
+            return fallback;
+        }
+        double width = saved[2];
+        double height = saved[3];
+        if (width < 1 || height < 1) {
+            return fallback;
+        }
+
+        // Cap first, then place: the position that keeps a window on screen
+        // depends on how wide it ended up being.
+        width = Math.min(width, screenWidth);
+        height = Math.min(height, screenHeight);
+
+        double x = clampInto(saved[0], screenX, screenX + screenWidth - width);
+        double y = clampInto(saved[1], screenY, screenY + screenHeight - height);
+
+        return new Placement(x, y, width, height,
+                Math.min(MIN_WIDTH, width), Math.min(MIN_HEIGHT, height));
+    }
+
+    private static boolean allFinite(double[] values) {
+        for (double value : values) {
+            if (!Double.isFinite(value)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * {@code value} pulled inside {@code [low, high]}.
+     *
+     * <p>{@code high} can be below {@code low} when the window is exactly as
+     * wide as the screen, so {@code low} wins -- flush with the left edge, which
+     * is the only position that fits.
+     */
+    private static double clampInto(double value, double low, double high) {
+        return Math.max(low, Math.min(value, Math.max(low, high)));
+    }
+
+    /**
      * {@code preferred}, reduced to fit, but never below a floor.
      *
      * <p>The {@code hardLimit} is what stops a pathological screen size -- a

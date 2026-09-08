@@ -2,6 +2,7 @@ package com.cyberscope.ui;
 
 import com.cyberscope.App;
 import com.cyberscope.repository.DatabaseManager;
+import com.cyberscope.repository.Preferences;
 import com.cyberscope.repository.RepositoryException;
 import com.cyberscope.repository.ScanRepository;
 import javafx.application.Application;
@@ -14,9 +15,24 @@ import javafx.stage.Stage;
 public class CyberScopeApp extends Application {
 
     private AppShell shell;
+    private Preferences preferences;
+    private Stage stage;
+
+    /**
+     * The last non-maximized bounds, tracked while the window is open.
+     *
+     * <p>Needed because {@code Stage} does not keep them. Once maximized,
+     * {@code getWidth()} returns the screen width and the size the user actually
+     * chose is gone -- so it is recorded on every move and resize <i>while the
+     * window is in its normal state</i>, and that is what gets saved.
+     */
+    private double[] restored;
 
     @Override
     public void start(Stage stage) {
+        this.stage = stage;
+        this.preferences = new Preferences(Preferences.defaultLocation());
+
         ScanRepository repository = null;
         String unavailable = "";
 
@@ -38,7 +54,8 @@ public class CyberScopeApp extends Application {
         // Visual bounds, not bounds: this already excludes the taskbar or dock,
         // so the status bar does not open underneath it.
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();
-        WindowGeometry.Placement where = WindowGeometry.fit(
+        WindowGeometry.Placement where = WindowGeometry.restore(
+                preferences.window(),
                 screen.getMinX(), screen.getMinY(), screen.getWidth(), screen.getHeight());
 
         stage.setTitle("CyberScope v" + App.VERSION + " - authorised targets only");
@@ -59,7 +76,34 @@ public class CyberScopeApp extends Application {
                 + "  ->  window " + fmt(where.width()) + "x" + fmt(where.height())
                 + " at (" + fmt(where.x()) + "," + fmt(where.y()) + ")");
 
+        restored = new double[] {where.x(), where.y(), where.width(), where.height()};
+        stage.xProperty().addListener((o, was, is) -> rememberIfNormal());
+        stage.yProperty().addListener((o, was, is) -> rememberIfNormal());
+        stage.widthProperty().addListener((o, was, is) -> rememberIfNormal());
+        stage.heightProperty().addListener((o, was, is) -> rememberIfNormal());
+
         stage.show();
+
+        // After show(), not before: setMaximized on an unshown stage is applied
+        // by some window managers and ignored by others, and the ones that
+        // ignore it leave the window at its normal size with the flag set.
+        if (preferences.windowMaximized()) {
+            stage.setMaximized(true);
+        }
+
+        // After show(), because the Scene assigns initial focus when it is
+        // displayed and would otherwise overwrite this. The sidebar is the
+        // BorderPane's left child, so without this the window opens with focus
+        // on a nav row and typing a target does nothing.
+        shell.focusContent();
+    }
+
+    private void rememberIfNormal() {
+        if (stage != null && !stage.isMaximized() && !stage.isIconified()
+                && Double.isFinite(stage.getWidth()) && stage.getWidth() >= 1) {
+            restored = new double[] {
+                    stage.getX(), stage.getY(), stage.getWidth(), stage.getHeight()};
+        }
     }
 
     private static String fmt(double value) {
@@ -69,8 +113,31 @@ public class CyberScopeApp extends Application {
     /** Runs on the FX thread at shutdown; releases the worker thread. */
     @Override
     public void stop() {
+        saveWindow();
         if (shell != null) {
             shell.shutdown();
+        }
+    }
+
+    /**
+     * Best effort, and it has to stay best effort.
+     *
+     * <p>This runs while the application is closing. A read-only home directory
+     * or a full disk is exactly the condition {@code Preferences} exists to
+     * tolerate, and an exception thrown here would surface as a stack trace on
+     * a window the user has already dismissed -- reporting a failure they cannot
+     * act on, about a convenience they did not ask for, at the one moment they
+     * cannot do anything about it. It goes to stderr and nowhere else.
+     */
+    private void saveWindow() {
+        if (preferences == null || stage == null || restored == null) {
+            return;
+        }
+        try {
+            preferences.setWindow(restored[0], restored[1], restored[2], restored[3],
+                    stage.isMaximized());
+        } catch (RepositoryException | RuntimeException e) {
+            System.err.println("[!] Could not save window position: " + e.getMessage());
         }
     }
 

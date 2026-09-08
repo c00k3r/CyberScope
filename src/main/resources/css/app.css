@@ -117,13 +117,29 @@
     -fx-text-fill: -cs-inferred;
 }
 
+/* The border is declared transparent here and only coloured on :focused.
+   -fx-border-width participates in a Region's insets, so switching a border on
+   for the focus ring would push the icon and label 1.5px right and the row
+   would visibly twitch as focus arrives. Reserving the space always costs
+   nothing and keeps the row still. */
 .nav-item {
     -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1.5px;
+    -fx-border-color: transparent;
     -fx-cursor: hand;
 }
 
 .nav-item:hover {
     -fx-background-color: -cs-surface;
+}
+
+/* Focus is a RING; active is a FILL. Two different marks because they are two
+   different facts, and they are routinely on different rows: arrow keys move
+   focus without opening anything, so "where Enter will take me" and "what I am
+   looking at" both have to be visible at the same time. */
+.nav-item:focused {
+    -fx-border-color: -cs-accent;
 }
 
 .nav-label {

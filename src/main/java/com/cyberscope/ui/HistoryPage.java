@@ -40,6 +40,14 @@ final class HistoryPage implements Page {
     private static final DateTimeFormatter WHEN =
             DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm:ss");
 
+    private final AppContext context;
+    private final ReportExporter exporter;
+    private final javafx.scene.control.Button exportButton =
+            new javafx.scene.control.Button("Export report");
+    private ScanOutcome selected;
+    private java.util.Map<com.cyberscope.model.Port, com.cyberscope.model.VulnAssessment>
+            selectedAssessments = Map.of();
+    private ScoreScanTask scoring;
     private final HistoryPane list;
     private final ResultsTable table = new ResultsTable();
     private final DiffView diffView;
@@ -49,11 +57,28 @@ final class HistoryPage implements Page {
     private final Node node;
 
     HistoryPage(AppContext context) {
+        this.context = context;
+        this.exporter = new ReportExporter(context);
         caption.setWrapText(true);
         caption.getStyleClass().add(Styles.SUMMARY);
 
         table.setPlaceholder("Select a scan on the left.");
-        resultsPane = new VBox(8, caption, table.node());
+        exportButton.setDisable(true);
+        exportButton.setTooltip(new javafx.scene.control.Tooltip(
+                "Save this stored scan as an HTML report, scored against today's index."));
+        exportButton.setOnAction(event -> {
+            if (selected != null) {
+                exporter.exportScan(ReportExporter.windowOf(exportButton),
+                        selected, 0L,
+                        com.cyberscope.service.score.PostureScorer.score(selectedAssessments));
+            }
+        });
+        javafx.scene.layout.HBox captionRow =
+                new javafx.scene.layout.HBox(12, caption, exportButton);
+        captionRow.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        javafx.scene.layout.HBox.setHgrow(caption, Priority.ALWAYS);
+
+        resultsPane = new VBox(8, captionRow, table.node());
         resultsPane.setPadding(new Insets(4, 20, 16, 16));
         VBox.setVgrow(table.node(), Priority.ALWAYS);
 
@@ -102,16 +127,53 @@ final class HistoryPage implements Page {
         detail.setCenter(resultsPane);
     }
 
+    /**
+     * Renders a stored scan, then scores it against the current index.
+     *
+     * <p>Drawn twice on purpose. The ports and service evidence are already in
+     * hand and appear immediately; the findings need an index lookup per service
+     * and arrive a moment later. Blocking the first paint on the second would
+     * make selecting a scan feel broken for no gain, and the interim state is
+     * honest -- the column reads "not checked" because, for that instant, it has
+     * not been.
+     */
     private void showSavedScan(ScanOutcome outcome) {
         showResults();
-        // A stored scan carries no assessment: the v0.4.0 schema predates them,
-        // and re-running the lookup here would stamp an old scan with today's
-        // index. Map.of() renders every Vulnerabilities cell as "not checked",
-        // which is the true statement about a scan taken before the index existed.
+        selected = outcome;
+        selectedAssessments = Map.of();
+        exportButton.setDisable(false);
         table.show(outcome, Map.of());
-        caption.setText(outcome.run().target().value() + "  -  "
+        String summary = outcome.run().target().value() + "  -  "
                 + WHEN.format(outcome.run().startedAt().atZone(ZoneId.systemDefault()))
-                + "  -  " + outcome.totalOpenPorts() + " open port(s)");
+                + "  -  " + outcome.totalOpenPorts() + " open port(s)";
+        caption.setText(summary);
+
+        if (scoring != null) {
+            // Selecting a second scan while the first is still being scored must
+            // not let the first one's findings land on the second one's ports.
+            scoring.cancel(true);
+        }
+        if (context.cveIndex() == null) {
+            return;
+        }
+        caption.setText(summary + "  -  scoring...");
+
+        ScoreScanTask task = new ScoreScanTask(context, outcome);
+        scoring = task;
+        task.setOnSucceeded(event -> {
+            scoring = null;
+            selectedAssessments = task.getValue();
+            table.show(outcome, task.getValue());
+            caption.setText(summary + "  -  scored against today's CVE index");
+        });
+        task.setOnFailed(event -> {
+            scoring = null;
+            Throwable error = task.getException();
+            caption.setText(summary + "  -  could not score: "
+                    + (error == null ? "unknown error" : error.getMessage()));
+        });
+        task.setOnCancelled(event -> scoring = null);
+        context.worker().submit(task);
     }
 
     private void showComparison(ScanOutcome first, ScanOutcome second) {
